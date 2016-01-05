@@ -2303,13 +2303,12 @@ static int handle_setpriority(struct ast_channel *chan, AGI *agi, int argc, cons
 
 static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const char * const argv[])
 {
-	struct ast_filestream *fs;
+	struct ast_filestream *fs, *fs2;
 	struct ast_frame *f;
 	struct timeval start;
 	long sample_offset = 0;
 	int res = 0;
 	int ms;
-
 	struct ast_dsp *sildet=NULL;         /* silence detector dsp */
 	int totalsilence = 0;
 	int dspsilence = 0;
@@ -2318,6 +2317,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 	char *silencestr = NULL;
 	struct ast_format rfmt;
 	ast_format_clear(&rfmt);
+	char filename[100];
 
 	/* XXX EAGI FIXME XXX */
 
@@ -2377,7 +2377,9 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 	if (res) {
 		ast_agi_send(agi->fd, chan, "200 result=%d (randomerror) endpos=%ld\n", res, sample_offset);
 	} else {
-		fs = ast_writefile(argv[2], argv[3], NULL, O_CREAT | O_WRONLY | (sample_offset ? O_APPEND : 0), 0, AST_FILE_MODE);
+	ast_log(LOG_NOTICE, ">>>>>>>>>>>>>>>> ast_writefile(%s,%s)\n",argv[2],argv[3]);
+		snprintf(filename, sizeof filename, "%s-stream1", argv[2]);
+		fs = ast_writefile(filename, argv[3], NULL, O_CREAT | O_WRONLY | (sample_offset ? O_APPEND : 0), 0, AST_FILE_MODE);
 		if (!fs) {
 			res = -1;
 			ast_agi_send(agi->fd, chan, "200 result=%d (writefile)\n", res);
@@ -2385,6 +2387,15 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				ast_dsp_free(sildet);
 			return RESULT_FAILURE;
 		}
+		snprintf(filename, sizeof filename, "%s-stream2", argv[2]);
+		fs2 = ast_writefile(filename, argv[3], NULL, O_CREAT | O_WRONLY | (sample_offset ? O_APPEND : 0), 0, AST_FILE_MODE);
+              	if (!fs2) {
+                        res = -1;
+                        //ast_agi_send(agi->fd, chan, "200 result=%d (writefile)\n", res);
+                        if (sildet)
+                                ast_dsp_free(sildet);
+                        return RESULT_FAILURE;
+                }
 
 		/* Request a video update */
 		ast_indicate(chan, AST_CONTROL_VIDUPDATE);
@@ -2406,6 +2417,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				return RESULT_FAILURE;
 			}
 			f = ast_read(chan);
+
 			if (!f) {
 				ast_agi_send(agi->fd, chan, "200 result=%d (hangup) endpos=%ld\n", -1, sample_offset);
 				ast_closestream(fs);
@@ -2432,6 +2444,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				break;
 			case AST_FRAME_VOICE:
 				ast_writestream(fs, f);
+				ast_writestream(fs2, f->audio2);
 				/* this is a safe place to check progress since we know that fs
 				 * is valid after a write, and it will then have our current
 				 * location */

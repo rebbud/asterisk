@@ -166,6 +166,8 @@ struct ast_frame {
 	long len;
 	/*! Sequence number */
 	int seqno;
+	/*! We add support for a 2nd audio stream*/
+	struct ast_frame *audio2;
 };
 
 /*!
