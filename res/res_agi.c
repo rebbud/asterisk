@@ -2317,7 +2317,10 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 	char *silencestr = NULL;
 	struct ast_format rfmt;
 	ast_format_clear(&rfmt);
-	char filename[100];
+        // filename variable is dynamically assigned from the length of argv[2]
+	// ~10 needed for "-streamX" suffix in the two generated wav files */
+	int filename_size = strlen(argv[2]) * sizeof(char) + 10;
+	char *filename = malloc(filename_size);
 
 	/* XXX EAGI FIXME XXX */
 
@@ -2377,23 +2380,26 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 	if (res) {
 		ast_agi_send(agi->fd, chan, "200 result=%d (randomerror) endpos=%ld\n", res, sample_offset);
 	} else {
-	ast_log(LOG_NOTICE, ">>>>>>>>>>>>>>>> ast_writefile(%s,%s)\n",argv[2],argv[3]);
-		snprintf(filename, sizeof filename, "%s-stream1", argv[2]);
+		snprintf(filename, filename_size, "%s-stream1", argv[2]);
 		fs = ast_writefile(filename, argv[3], NULL, O_CREAT | O_WRONLY | (sample_offset ? O_APPEND : 0), 0, AST_FILE_MODE);
+		ast_log(LOG_NOTICE, "Audio file #1: %s.%s\n",filename,argv[3]);
 		if (!fs) {
 			res = -1;
 			ast_agi_send(agi->fd, chan, "200 result=%d (writefile)\n", res);
 			if (sildet)
 				ast_dsp_free(sildet);
+			free(filename);
 			return RESULT_FAILURE;
 		}
-		snprintf(filename, sizeof filename, "%s-stream2", argv[2]);
+		snprintf(filename, filename_size, "%s-stream2", argv[2]);
 		fs2 = ast_writefile(filename, argv[3], NULL, O_CREAT | O_WRONLY | (sample_offset ? O_APPEND : 0), 0, AST_FILE_MODE);
+		ast_log(LOG_NOTICE, "Audio file #2: %s.%s\n",filename,argv[3]);
               	if (!fs2) {
                         res = -1;
                         //ast_agi_send(agi->fd, chan, "200 result=%d (writefile)\n", res);
                         if (sildet)
                                 ast_dsp_free(sildet);
+			free(filename);
                         return RESULT_FAILURE;
                 }
 
@@ -2474,6 +2480,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			if (gotsilence)
 				break;
 		}
+		free(filename);
 
 		if (gotsilence) {
 			ast_stream_rewind(fs, silence-1000);

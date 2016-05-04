@@ -9900,8 +9900,8 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 	char buf[SIPBUFSIZE];
 	struct ast_format tmp_fmt;
 	/* END UNKNOWN */
-
-	int audio_port_list[10];
+	/* We support only two RTP ports in a single SIP session, so far */
+	int audio_port_list[1];
 	int audio_index = 0;
 
 	/* Initial check */
