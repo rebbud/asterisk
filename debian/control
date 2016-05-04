@@ -7,5 +7,5 @@ Provides: asterisk-11
 Depends: libc6 (>= 2.16), libcap2 (>= 2.10), libedit2 (>= 2.11-20080614), libsqlite3-0 (>= 3.5.9), libssl1.0.0 (>= 1.0.0), libxml2 (>= 2.7.4), adduser, sed (>= 3.02-8), grep (>= 2.4.2-3), coreutils (>= 5.0-5)
 Maintainer: Miguel Oyarzo <miguel.oyarzo@dubber.net>
 Description: Rebbud's custom Asterisk
- This package provides Asterisk 11.20.0 with Rebbud's patches two handle two RTP streams and generate two recording files.
+ This package provides Asterisk 11.20.0 with Rebbud's patches to handle two RTP streams and generate two recording files.
 Homepage: http://www.asterisk.org/
