@@ -2307,13 +2307,19 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 	struct ast_frame *f;
 	struct timeval start;
 	long sample_offset = 0;
+	long sample_offset2 = 0;
 	int res = 0;
 	int ms;
 	struct ast_dsp *sildet=NULL;         /* silence detector dsp */
+	struct ast_dsp *sildet2=NULL;         /* silence detector dsp */
 	int totalsilence = 0;
+	int totalsilence2 = 0;
 	int dspsilence = 0;
+	int dspsilence2 = 0;
 	int silence = 0;                /* amount of silence to allow */
+	int silence2 = 0;                /* amount of silence to allow */
 	int gotsilence = 0;             /* did we timeout for silence? */
+	int gotsilence2 = 0;             /* did we timeout for silence? */
 	char *silencestr = NULL;
 	struct ast_format rfmt;
 	ast_format_clear(&rfmt);
@@ -2402,17 +2408,22 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			free(filename);
                         return RESULT_FAILURE;
                 }
-
 		/* Request a video update */
 		ast_indicate(chan, AST_CONTROL_VIDUPDATE);
 
 		ast_channel_stream_set(chan, fs);
+		ast_channel_stream_set(chan, fs2);
 		ast_applystream(chan,fs);
+		ast_applystream(chan,fs2);
 		/* really should have checks */
 		ast_seekstream(fs, sample_offset, SEEK_SET);
 		ast_truncstream(fs);
+		ast_seekstream(fs2, sample_offset, SEEK_SET);
+		ast_truncstream(fs2);
 
 		start = ast_tvnow();
+//AQUI
+
 		while ((ms < 0) || ast_tvdiff_ms(ast_tvnow(), start) < ms) {
 			res = ast_waitfor(chan, ms - ast_tvdiff_ms(ast_tvnow(), start));
 			if (res < 0) {
@@ -2440,6 +2451,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					ast_stream_rewind(fs, 200);
 					ast_truncstream(fs);
 					sample_offset = ast_tellstream(fs);
+					sample_offset2 = ast_tellstream(fs2);
 					ast_agi_send(agi->fd, chan, "200 result=%d (dtmf) endpos=%ld\n", f->subclass.integer, sample_offset);
 					ast_closestream(fs);
 					ast_frfree(f);
@@ -2455,6 +2467,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				 * is valid after a write, and it will then have our current
 				 * location */
 				sample_offset = ast_tellstream(fs);
+				sample_offset2 = ast_tellstream(fs2);
 				if (silence > 0) {
 					dspsilence = 0;
 					ast_dsp_silence(sildet, f, &dspsilence);
@@ -2469,6 +2482,21 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 						break;
 					}
 				}
+
+                                if (silence2 > 0) {
+                                        dspsilence2 = 0;
+                                        ast_dsp_silence(sildet, f->audio2, &dspsilence2);
+                                        if (dspsilence2) {
+                                                totalsilence2 = dspsilence2;
+                                        } else {
+                                               totalsilence2 = 0;
+                                        }
+                                        if (totalsilence2 > silence2) {
+                                                /* Ended happily with silence */
+                                                gotsilence2 = 1;
+                                                break;
+                                        }
+                                }
 				break;
 			case AST_FRAME_VIDEO:
 				ast_writestream(fs, f);
@@ -2489,6 +2517,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 		}
 		ast_agi_send(agi->fd, chan, "200 result=%d (timeout) endpos=%ld\n", res, sample_offset);
 		ast_closestream(fs);
+		ast_closestream(fs2);
 	}
 
 	if (silence > 0) {

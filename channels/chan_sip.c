@@ -5882,6 +5882,8 @@ static int create_addr_from_peer(struct sip_pvt *dialog, struct sip_peer *peer)
         if (dialog->rtp2) { /* Audio2 */
                 ast_rtp_instance_set_prop(dialog->rtp2, AST_RTP_PROPERTY_DTMF, ast_test_flag(&dialog->flags[0], SIP_DTMF) == SIP_DTMF_RFC2833);
                 ast_rtp_instance_set_prop(dialog->rtp2, AST_RTP_PROPERTY_DTMF_COMPENSATE, ast_test_flag(&dialog->flags[1], SIP_PAGE2_RFC2833_COMPENSATE));
+
+// AQUI: ast_rtp_codecs_packetization_set must be set with the 2nd dialog
                 ast_rtp_codecs_packetization_set(ast_rtp_instance_get_codecs(dialog->rtp2), dialog->rtp2, &dialog->prefs);
         }
 
@@ -8286,7 +8288,7 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		ast_frfree(f);
 		return &ast_null_frame;
 	}
-
+// AQUI
 	/* We already hold the channel lock */
 	if (!p->owner || (f && f->frametype != AST_FRAME_VOICE)) {
 		return f;
@@ -9901,7 +9903,7 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 	struct ast_format tmp_fmt;
 	/* END UNKNOWN */
 	/* We support only two RTP ports in a single SIP session, so far */
-	int audio_port_list[1];
+	int audio_port_list[2]={0,0};
 	int audio_index = 0;
 
 	/* Initial check */
@@ -13167,6 +13169,7 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 	int needtext = FALSE;
 	int debug = sip_debug_test_pvt(p);
 	int min_audio_packet_size = 0;
+	int min_audio_packet_size2 = 0;
 	int min_video_packet_size = 0;
 	int min_text_packet_size = 0;
 
@@ -13373,7 +13376,7 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 
 			if (AST_FORMAT_GET_TYPE(tmp_fmt.id) == AST_FORMAT_TYPE_AUDIO) {
 				add_codec_to_sdp(p, &tmp_fmt, &m_audio, &a_audio, debug, &min_audio_packet_size);
-				add_codec_to_sdp(p, &tmp_fmt, &m_audio2, &a_audio2, debug, &min_audio_packet_size);
+				add_codec_to_sdp(p, &tmp_fmt, &m_audio2, &a_audio2, debug, &min_audio_packet_size2);
 			} else if (needvideo && (AST_FORMAT_GET_TYPE(tmp_fmt.id) == AST_FORMAT_TYPE_VIDEO)) {
 				add_vcodec_to_sdp(p, &tmp_fmt, &m_video, &a_video, debug, &min_video_packet_size);
 			} else if (needtext && (AST_FORMAT_GET_TYPE(tmp_fmt.id) == AST_FORMAT_TYPE_TEXT)) {
@@ -13393,7 +13396,7 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 
 			if (AST_FORMAT_GET_TYPE(tmp_fmt.id) == AST_FORMAT_TYPE_AUDIO) {
 				add_codec_to_sdp(p, &tmp_fmt, &m_audio, &a_audio, debug, &min_audio_packet_size);
-				add_codec_to_sdp(p, &tmp_fmt, &m_audio2, &a_audio2, debug, &min_audio_packet_size);
+				add_codec_to_sdp(p, &tmp_fmt, &m_audio2, &a_audio2, debug, &min_audio_packet_size2);
 			} else if (needvideo && (AST_FORMAT_GET_TYPE(tmp_fmt.id) == AST_FORMAT_TYPE_VIDEO)) {
 				add_vcodec_to_sdp(p, &tmp_fmt, &m_video, &a_video, debug, &min_video_packet_size);
 			} else if (needtext && (AST_FORMAT_GET_TYPE(tmp_fmt.id) == AST_FORMAT_TYPE_TEXT)) {
@@ -13422,8 +13425,11 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 
 		if (min_audio_packet_size) {
 			ast_str_append(&a_audio, 0, "a=ptime:%d\r\n", min_audio_packet_size);
-			ast_str_append(&a_audio2, 0, "a=ptime:%d\r\n", min_audio_packet_size);
 		}
+
+                if (min_audio_packet_size2) {
+                        ast_str_append(&a_audio2, 0, "a=ptime:%d\r\n", min_audio_packet_size2);
+                }
 
 
 		/* XXX don't think you can have ptime for video */
