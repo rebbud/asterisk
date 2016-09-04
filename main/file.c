@@ -152,6 +152,9 @@ int ast_stopstream(struct ast_channel *tmp)
 int ast_writestream(struct ast_filestream *fs, struct ast_frame *f)
 {
 	int res = -1;
+
+       if(!f)
+               return -1;
 	if (f->frametype == AST_FRAME_VIDEO) {
 		if (AST_FORMAT_GET_TYPE(fs->fmt->format.id) == AST_FORMAT_TYPE_AUDIO) {
 			/* This is the audio portion.  Call the video one... */
