@@ -2428,6 +2428,8 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			res = ast_waitfor(chan, ms - ast_tvdiff_ms(ast_tvnow(), start));
 			if (res < 0) {
 				ast_closestream(fs);
+				ast_closestream(fs2);
+// AQUI descriptor not closed??????!!!!! 
 				ast_agi_send(agi->fd, chan, "200 result=%d (waitfor) endpos=%ld\n", res,sample_offset);
 				if (sildet)
 					ast_dsp_free(sildet);
@@ -2438,6 +2440,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			if (!f) {
 				ast_agi_send(agi->fd, chan, "200 result=%d (hangup) endpos=%ld\n", -1, sample_offset);
 				ast_closestream(fs);
+				ast_closestream(fs2);
 				if (sildet)
 					ast_dsp_free(sildet);
 				return RESULT_FAILURE;
