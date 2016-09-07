@@ -921,7 +921,7 @@ static int agidebug = 0;
 #define TONE_BLOCK_SIZE 200
 
 /* Max time to connect to an AGI remote host */
-#define MAX_AGI_CONNECT 2000
+#define MAX_AGI_CONNECT 5000
 
 #define AGI_PORT 4573
 
