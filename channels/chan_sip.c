@@ -24083,6 +24083,8 @@ static void stop_media_flows(struct sip_pvt *p)
 	/* Immediately stop RTP, VRTP and UDPTL as applicable */
 	if (p->rtp)
 		ast_rtp_instance_stop(p->rtp);
+        if (p->rtp2)
+                ast_rtp_instance_stop(p->rtp2);
 	if (p->vrtp)
 		ast_rtp_instance_stop(p->vrtp);
 	if (p->trtp)
