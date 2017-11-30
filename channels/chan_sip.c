@@ -12861,7 +12861,7 @@ static void add_codec_to_sdp(const struct sip_pvt *p,
 	if (debug)
 		ast_verbose("Adding codec %u (%s) to SDP\n", format->id, ast_getformatname(format));
 
-    if (two_streams == 0) {
+	if (two_streams == 0) {
 		if (((rtp_code = ast_rtp_codecs_payload_code(ast_rtp_instance_get_codecs(p->rtp), 1, format, 0)) == -1) ||
 			!(mime = ast_rtp_lookup_mime_subtype2(1, format, 0, ast_test_flag(&p->flags[0], SIP_G726_NONSTANDARD) ? AST_RTP_OPT_G726_NONSTANDARD : 0)) ||
 			!(rate = ast_rtp_lookup_sample_rate2(1, format, 0))) 
@@ -13671,11 +13671,8 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 			add_content(resp, ast_str_buffer(m_audio));
 			add_content(resp, ast_str_buffer(a_audio));
 			add_content(resp, hold);
-			if (a_crypto) {
-				add_content(resp, a_crypto);
-			}
-            /* BAU-640: When there is no change in SDP version number in reINVITE, 
-             * do not forget to add the 2nd m-line from the old SDP */
+			/* BAU-640: When there is no change in SDP version number in reINVITE, 
+			* do not forget to add the 2nd m-line from the old SDP */
 			add_content(resp, ast_str_buffer(m_audio2));
 			add_content(resp, ast_str_buffer(a_audio2));
 			add_content(resp, hold);
