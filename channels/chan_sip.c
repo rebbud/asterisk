@@ -10862,24 +10862,28 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 		ast_format_cap_joint_append(p->caps, tpeercapability, ast_channel_nativeformats(p->owner));
 
 		if (debug) {
-			char s1[SIPBUFSIZE], s2[SIPBUFSIZE];
-			ast_debug(3, "After SDP processing: caps=%s, old nativeformats %s\n",
-				ast_getformatname_multiple(s1, SIPBUFSIZE, p->caps),
-				ast_getformatname_multiple(s2, SIPBUFSIZE, ast_channel_nativeformats(p->owner)));
+			char s1[SIPBUFSIZE], s2[SIPBUFSIZE], s3[SIPBUFSIZE];
+			ast_debug(3, "After SDP processing: jointcaps=%s, peercaps=%s, old nativeformats %s\n",
+				ast_getformatname_multiple(s1, SIPBUFSIZE, p->jointcaps),
+				ast_getformatname_multiple(s2, SIPBUFSIZE, p->peercaps),
+				ast_getformatname_multiple(s3, SIPBUFSIZE, ast_channel_nativeformats(p->owner)));
 		}
 
-		ast_set_read_format(p->owner, ast_channel_readformat(p->owner));
-		ast_set_write_format(p->owner, ast_channel_writeformat(p->owner));
+		// Update the new chosen codec 
+		// ast_set_read_format(p->owner, ast_channel_readformat(p->owner));
+		// ast_set_write_format(p->owner, ast_channel_writeformat(p->owner));
+		ast_set_read_format(p->owner, &tmp_fmt);
+		ast_set_write_format(p->owner, &tmp_fmt);
 	}
 
 	if (ast_test_flag(&p->flags[1], SIP_PAGE2_CALL_ONHOLD) && (!ast_sockaddr_isnull(sa) || !ast_sockaddr_isnull(vsa) || !ast_sockaddr_isnull(tsa) || !ast_sockaddr_isnull(isa)) && (!sendonly || sendonly == -1)) {
-                ast_debug(3, "process_sdp: call unhold\n");
+		ast_debug(3, "process_sdp: call unhold\n");
 		ast_queue_control(p->owner, AST_CONTROL_UNHOLD);
 		/* Activate a re-invite */
 		ast_queue_frame(p->owner, &ast_null_frame);
 		change_hold_state(p, req, FALSE, sendonly);
 	} else if ((sockaddr_is_null_or_any(sa) && sockaddr_is_null_or_any(vsa) && sockaddr_is_null_or_any(tsa) && sockaddr_is_null_or_any(isa)) || (sendonly && sendonly != -1)) {
-                ast_debug(3, "process_sdp: call hold\n");
+		ast_debug(3, "process_sdp: call hold\n");
 		ast_queue_control_data(p->owner, AST_CONTROL_HOLD,
 				       S_OR(p->mohsuggest, NULL),
 				       !ast_strlen_zero(p->mohsuggest) ? strlen(p->mohsuggest) + 1 : 0);
