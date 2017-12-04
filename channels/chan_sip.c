@@ -10869,9 +10869,11 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 				ast_getformatname_multiple(s3, SIPBUFSIZE, ast_channel_nativeformats(p->owner)));
 		}
 
-		// Update the new chosen codec 
+		// Update the new chosen codec - audio only
 		// ast_set_read_format(p->owner, ast_channel_readformat(p->owner));
 		// ast_set_write_format(p->owner, ast_channel_writeformat(p->owner));
+		ast_format_copy(ast_channel_rawreadformat(p->owner), &tmp_fmt);
+		ast_format_copy(ast_channel_rawwriteformat(p->owner), &tmp_fmt);
 		ast_set_read_format(p->owner, &tmp_fmt);
 		ast_set_write_format(p->owner, &tmp_fmt);
 	}
