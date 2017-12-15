@@ -2507,9 +2507,11 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				/* Ignore all other frames */
 				break;
 			}
-			ast_frfree(f);
-                       if(f->audio2)
-                               ast_frfree(f->audio2);
+			if (f->frametype != AST_FRAME_NULL) {
+				if (f->audio2 && f->audio2->frametype != AST_FRAME_NULL)
+					ast_frfree(f->audio2);
+				ast_frfree(f);
+			}
 
 			if (gotsilence)
 				break;
