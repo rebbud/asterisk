@@ -8240,21 +8240,21 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
         if (f && (f->frametype == AST_FRAME_VOICE)) { /* RTP Audio */
             /* Add flag to distinguish the stream */
             ast_set_flag(f, AST_FRFLAG_STREAM1);
-            ast_debug(3, "HRK: STREAM1, frametype = %d, flag=%d\n", f->frametype,
+            ast_debug(3, "STREAM1, frametype = %d, flag=%d\n", f->frametype,
                         ast_test_flag(f, AST_FRFLAG_STREAM1));
 			/* Not null frame, hence piggyback to be added to channel queue and 
 			 * also set flag to distinguish the stream */
 			if (f2->frametype == AST_FRAME_VOICE) {
             	f->audio2 = f2;
             	ast_set_flag(f2, AST_FRFLAG_STREAM2);
-            	ast_debug(3, "HRK: PB STREAM2, frametype = %d, flag=%d\n", f2->frametype,
+            	ast_debug(3, "PB STREAM2, frametype = %d, flag=%d\n", f2->frametype,
                         ast_test_flag(f2, AST_FRFLAG_STREAM2));
 			}
         }
         else if (f2 && (f2->frametype == AST_FRAME_VOICE)) {   /* RTP Audio2 */
             /* Audio packets sent to the 2nd RTP instance */
             ast_set_flag(f2, AST_FRFLAG_STREAM2);
-            ast_debug(3, "HRK: STREAM2, frametype = %d, flag=%d\n", f2->frametype,
+            ast_debug(3, "STREAM2, frametype = %d, flag=%d\n", f2->frametype,
                         ast_test_flag(f2, AST_FRFLAG_STREAM2));
 			/* No piggybacking - make sure this gets added to channel queue */
 			f = f2;

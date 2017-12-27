@@ -2464,18 +2464,18 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				}
 				break;
 			case AST_FRAME_VOICE:
-                ast_debug(3, "HRK: %s received frametype=%d, flags = %u\n", ast_channel_name(chan), f->frametype, f->flags);
+                ast_debug(3, "%s received frametype=%d, flags = %u\n", ast_channel_name(chan), f->frametype, f->flags);
                 if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
-                    ast_debug(3, "HRK: write stream1, frametype=%d, flag=%d\n", f->frametype, AST_FRFLAG_STREAM1);
+                    ast_debug(3, "write stream1, frametype=%d, flag=%d\n", f->frametype, AST_FRFLAG_STREAM1);
                     ast_writestream(fs, f);
                 }
 				else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
-                    ast_debug(3, "HRK: write stream2, frametype=%d, flag=%d\n", f->frametype, AST_FRFLAG_STREAM2);
+                    ast_debug(3, "write stream2, frametype=%d, flag=%d\n", f->frametype, AST_FRFLAG_STREAM2);
                     ast_writestream(fs2, f);
                 }
                 if (f->audio2 && (f->audio2->frametype == AST_FRAME_VOICE) && 
 						ast_test_flag(f->audio2, AST_FRFLAG_STREAM2)) {
-                    ast_debug(3, "HRK: write PB stream2, frametype=%d, flag=%d\n", f->frametype, AST_FRFLAG_STREAM2);
+                    ast_debug(3, "write PB stream2, frametype=%d, flag=%d\n", f->frametype, AST_FRFLAG_STREAM2);
                     ast_writestream(fs2, f->audio2);
                 }
 
