@@ -2464,8 +2464,21 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				}
 				break;
 			case AST_FRAME_VOICE:
-				ast_writestream(fs, f);
-				ast_writestream(fs2, f->audio2);
+                ast_debug(3, "HRK: %s received frametype=%d, flags = %u\n", ast_channel_name(chan), f->frametype, f->flags);
+                if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
+                    ast_debug(3, "HRK: write stream1, frametype=%d, flag=%d\n", f->frametype, AST_FRFLAG_STREAM1);
+                    ast_writestream(fs, f);
+                }
+				else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
+                    ast_debug(3, "HRK: write stream2, frametype=%d, flag=%d\n", f->frametype, AST_FRFLAG_STREAM2);
+                    ast_writestream(fs2, f);
+                }
+                if (f->audio2 && (f->audio2->frametype == AST_FRAME_VOICE) && 
+						ast_test_flag(f->audio2, AST_FRFLAG_STREAM2)) {
+                    ast_debug(3, "HRK: write PB stream2, frametype=%d, flag=%d\n", f->frametype, AST_FRFLAG_STREAM2);
+                    ast_writestream(fs2, f->audio2);
+                }
+
 				/* this is a safe place to check progress since we know that fs
 				 * is valid after a write, and it will then have our current
 				 * location */
@@ -2486,20 +2499,20 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					}
 				}
 
-                                if (silence2 > 0) {
-                                        dspsilence2 = 0;
-                                        ast_dsp_silence(sildet, f->audio2, &dspsilence2);
-                                        if (dspsilence2) {
-                                                totalsilence2 = dspsilence2;
-                                        } else {
-                                               totalsilence2 = 0;
-                                        }
-                                        if (totalsilence2 > silence2) {
-                                                /* Ended happily with silence */
-                                                gotsilence2 = 1;
-                                                break;
-                                        }
-                                }
+				if (silence2 > 0) {
+					dspsilence2 = 0;
+					ast_dsp_silence(sildet, f->audio2, &dspsilence2);
+					if (dspsilence2) {
+						totalsilence2 = dspsilence2;
+					} else {
+						totalsilence2 = 0;
+					}
+					if (totalsilence2 > silence2) {
+						/* Ended happily with silence */
+						gotsilence2 = 1;
+						break;
+					}
+				}
 				break;
 			case AST_FRAME_VIDEO:
 				ast_writestream(fs, f);

@@ -126,6 +126,8 @@ enum ast_frame_type {
 enum {
 	/*! This frame contains valid timing information */
 	AST_FRFLAG_HAS_TIMING_INFO = (1 << 0),
+	AST_FRFLAG_STREAM1 = (1 << 1),
+	AST_FRFLAG_STREAM2 = (1 << 2),
 };
 
 union ast_frame_subclass {
