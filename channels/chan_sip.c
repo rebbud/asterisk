@@ -8240,6 +8240,7 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
         if (f && (f->frametype == AST_FRAME_VOICE)) { /* RTP Audio */
             /* Add flag to distinguish the stream */
             ast_set_flag(f, AST_FRFLAG_STREAM1);
+			f->audio2 = NULL;
             ast_debug(3, "STREAM1, frametype = %d, flag=%d\n", f->frametype,
                         ast_test_flag(f, AST_FRFLAG_STREAM1));
 			/* Not null frame, hence piggyback to be added to channel queue and 
@@ -8258,6 +8259,7 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
                         ast_test_flag(f2, AST_FRFLAG_STREAM2));
 			/* No piggybacking - make sure this gets added to channel queue */
 			f = f2;
+			f->audio2 = NULL;
         }
 		break;
 	case 1:
