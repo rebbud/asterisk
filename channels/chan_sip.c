@@ -8238,7 +8238,7 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		/* Audio packets sent to the 2nd RTP instance and  assigned to f->audio2 */
 		f2 = ast_rtp_instance_read(p->rtp2, 0);	/* RTP Audio2 */
 		if (f && (f->frametype == AST_FRAME_VOICE)) { /* RTP Audio */
-            /* Add flag to distinguish the stream */
+			/* Add flag to distinguish the stream */
 			ast_set_flag(f, AST_FRFLAG_STREAM1);
 			f->audio2 = NULL;
 			ast_debug(3, "STREAM1, frametype = %d, flag=%d\n", f->frametype,
@@ -8249,7 +8249,7 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 				f->audio2 = f2;
 				ast_set_flag(f2, AST_FRFLAG_STREAM2);
 				ast_debug(3, "PB STREAM2, frametype = %d, flag=%d\n", f2->frametype,
-                        ast_test_flag(f2, AST_FRFLAG_STREAM2));
+						ast_test_flag(f2, AST_FRFLAG_STREAM2));
 			}
 		}
 		else if (f2 && (f2->frametype == AST_FRAME_VOICE)) {   /* RTP Audio2 */
@@ -8318,25 +8318,27 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		return f->audio2;
 	}
 
-	if ((f && !ast_format_cap_iscompatible(ast_channel_nativeformats(p->owner), &f->subclass.format)) || \
-            (f->audio2 && !ast_format_cap_iscompatible(ast_channel_nativeformats(p->owner), &f->audio2->subclass.format)) ) {
+	// Change channel native formats based on received and supported formats
+	if (f && !ast_format_cap_iscompatible(ast_channel_nativeformats(p->owner), &f->subclass.format)) {
 		if (!ast_format_cap_iscompatible(p->jointcaps, &f->subclass.format)) {
 			ast_debug(1, "Bogus frame of format '%s' received from '%s'!\n",
 				ast_getformatname(&f->subclass.format), ast_channel_name(p->owner));
 			ast_frfree(f);
 			return &ast_null_frame;
 		}
-		if (!ast_format_cap_iscompatible(p->jointcaps, &f->audio2->subclass.format)) { 
-			ast_debug(1, "Bogus frame of format '%s' received from '%s'!\n",
-				ast_getformatname(&f->audio2->subclass.format), ast_channel_name(p->owner));
-			ast_frfree(f->audio2);
-			return &ast_null_frame;
+		if (f->audio2 &&
+			!ast_format_cap_iscompatible(ast_channel_nativeformats(p->owner), &f->audio2->subclass.format) &&
+			!ast_format_cap_iscompatible(p->jointcaps, &f->audio2->subclass.format)) { 
+				ast_debug(1, "Bogus frame of format '%s' received from '%s'!\n",
+					ast_getformatname(&f->audio2->subclass.format), ast_channel_name(p->owner));
+				ast_frfree(f->audio2);
+				return &ast_null_frame;
 		}
-		ast_debug(1, "Oooh, format changed to %s\n",
-			ast_getformatname(&f->subclass.format));
+		ast_debug(1, "Oooh, format changed to %s\n", ast_getformatname(&f->subclass.format));
 		ast_format_cap_remove_bytype(ast_channel_nativeformats(p->owner), AST_FORMAT_TYPE_AUDIO);
 		ast_format_cap_add(ast_channel_nativeformats(p->owner), &f->subclass.format);
-		ast_format_cap_add(ast_channel_nativeformats(p->owner), &f->audio2->subclass.format);
+		if (f->audio2)
+			ast_format_cap_add(ast_channel_nativeformats(p->owner), &f->audio2->subclass.format);
 		ast_set_read_format(p->owner, ast_channel_readformat(p->owner));
 		ast_set_write_format(p->owner, ast_channel_writeformat(p->owner));
 	}
@@ -8407,7 +8409,7 @@ static struct ast_frame *sip_read(struct ast_channel *ast)
 
 	/* Only allow audio through if they sent progress with SDP, or if the channel is actually answered */
 	if (fr && fr->frametype == AST_FRAME_VOICE && p->invitestate != INV_EARLY_MEDIA && ast_channel_state(ast) != AST_STATE_UP) {
-		ast_frfree(fr->audio2);
+		if (fr->audio2) ast_frfree(fr->audio2);
 		ast_frfree(fr);
 		fr->audio2 = &ast_null_frame;
 		fr = &ast_null_frame;
@@ -9897,7 +9899,7 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 
 	int peernoncodeccapability = 0, vpeernoncodeccapability = 0, tpeernoncodeccapability = 0;
 
-	struct ast_rtp_codecs newaudiortp[2] = { 0, 0 }; 
+	struct ast_rtp_codecs newaudiortp[2] = { {0}, {0} }; 
 	struct ast_rtp_codecs newvideortp = { 0, }, newtextrtp = { 0, };
 	struct ast_format_cap *newjointcapability = ast_format_cap_alloc_nolock(); /* Negotiated capability */
 	struct ast_format_cap *newpeercapability = ast_format_cap_alloc_nolock();
