@@ -8333,7 +8333,6 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 					ast_getformatname(&f->audio2->subclass.format), ast_channel_name(p->owner));
 				ast_frfree(f->audio2);
 				return &ast_null_frame;
-			}
 		}
 		ast_debug(1, "Oooh, format changed to %s\n", ast_getformatname(&f->subclass.format));
 		ast_format_cap_remove_bytype(ast_channel_nativeformats(p->owner), AST_FORMAT_TYPE_AUDIO);
@@ -8410,7 +8409,7 @@ static struct ast_frame *sip_read(struct ast_channel *ast)
 
 	/* Only allow audio through if they sent progress with SDP, or if the channel is actually answered */
 	if (fr && fr->frametype == AST_FRAME_VOICE && p->invitestate != INV_EARLY_MEDIA && ast_channel_state(ast) != AST_STATE_UP) {
-		ast_frfree(fr->audio2);
+		if (fr->audio2) ast_frfree(fr->audio2);
 		ast_frfree(fr);
 		fr->audio2 = &ast_null_frame;
 		fr = &ast_null_frame;
@@ -9900,7 +9899,7 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 
 	int peernoncodeccapability = 0, vpeernoncodeccapability = 0, tpeernoncodeccapability = 0;
 
-	struct ast_rtp_codecs newaudiortp[2] = { 0, 0 }; 
+	struct ast_rtp_codecs newaudiortp[2] = { {0}, {0} }; 
 	struct ast_rtp_codecs newvideortp = { 0, }, newtextrtp = { 0, };
 	struct ast_format_cap *newjointcapability = ast_format_cap_alloc_nolock(); /* Negotiated capability */
 	struct ast_format_cap *newpeercapability = ast_format_cap_alloc_nolock();
