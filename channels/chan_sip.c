@@ -8339,8 +8339,8 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		ast_format_cap_add(ast_channel_nativeformats(p->owner), &f->subclass.format);
 		if (f->audio2)
 			ast_format_cap_add(ast_channel_nativeformats(p->owner), &f->audio2->subclass.format);
-		ast_set_read_format(p->owner, ast_channel_readformat(p->owner));
-		ast_set_write_format(p->owner, ast_channel_writeformat(p->owner));
+		ast_set_read_format(p->owner, &f->subclass.format);
+		ast_set_write_format(p->owner, &f->subclass.format);
 	}
 
 	if (f && p->dsp) {
