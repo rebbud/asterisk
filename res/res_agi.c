@@ -2415,6 +2415,8 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			}
 			switch(f->frametype) {
 			case AST_FRAME_DTMF:
+				ast_debug(3, "DUB: no processing for DTMF digit=%d, flag=%d \n", f->subclass.integer,
+					ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
 				if (strchr(argv[4], f->subclass.integer)) {
 					/* This is an interrupting chracter, so rewind to chop off any small
 					   amount of DTMF that may have been recorded
@@ -2431,25 +2433,31 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				}
 				break;
 			case AST_FRAME_VOICE:
-				ast_writestream(fs, f);
-				/* this is a safe place to check progress since we know that fs
-				 * is valid after a write, and it will then have our current
-				 * location */
-				sample_offset = ast_tellstream(fs);
-				if (silence > 0) {
-					dspsilence = 0;
-					ast_dsp_silence(sildet, f, &dspsilence);
-					if (dspsilence) {
-						totalsilence = dspsilence;
-					} else {
-						totalsilence = 0;
-					}
-					if (totalsilence > silence) {
-						/* Ended happily with silence */
-						gotsilence = 1;
-						break;
+				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+					ast_debug(3, "DUB, recording\n");
+					ast_writestream(fs, f);
+					/* this is a safe place to check progress since we know that fs
+					 * is valid after a write, and it will then have our current
+					 * location */
+					sample_offset = ast_tellstream(fs);
+					if (silence > 0) {
+						dspsilence = 0;
+						ast_dsp_silence(sildet, f, &dspsilence);
+						if (dspsilence) {
+							totalsilence = dspsilence;
+						} else {
+							totalsilence = 0;
+						}
+						if (totalsilence > silence) {
+							/* Ended happily with silence */
+							gotsilence = 1;
+							break;
+						}
 					}
 				}
+				else 
+					ast_debug(3, "DUB, recording paused\n");
+
 				break;
 			case AST_FRAME_VIDEO:
 				ast_writestream(fs, f);

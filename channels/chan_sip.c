@@ -21514,6 +21514,56 @@ static void sip_dump_history(struct sip_pvt *dialog)
 	ast_debug(1, "\n---------- END SIP HISTORY for '%s' \n", dialog->callid);
 }
 
+/*! \brief  compare the received pattern against the configured one */
+static void dub_channel_cmp_dtmf_pattern(struct sip_pvt *p)
+{
+	char xpause[3] = "*9";
+	char xresume[3] = "#9";
+
+	ast_debug(3, "DUB: strcmp xpause=%d\n",strcmp(p->dub_dtmf_store.pattern, xpause));
+	ast_debug(3, "DUB: strcmp xresume=%d\n",strcmp(p->dub_dtmf_store.pattern, xresume));
+
+	if (!strcmp(p->dub_dtmf_store.pattern, xpause) && 
+		!ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+		/* DUB - Set flag to pause recording */
+		ast_set_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
+		ast_debug(3, "DUB, compare %s and %s, set flag=%d\n", xpause, p->dub_dtmf_store.pattern, 
+				ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+		memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS); 
+	}
+	else if (!strcmp(p->dub_dtmf_store.pattern, xresume) && 
+		ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+		/* DUB - Clear pause recording flag */
+		ast_clear_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
+		ast_debug(3, "DUB, compare %s and %s, cleared flag=%d\n", xresume, p->dub_dtmf_store.pattern, 
+				ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+		memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS); 
+	}
+
+	return;
+}
+
+/*! \brief  build a pattern of DTMF digits - Maximum 3 */
+static void dub_channel_build_dtmf_pattern(struct sip_pvt *p, const char digit)
+{
+	/* Append the last received digit and check the stored timestamp.
+	 * if current time - stored > 3s, discard existing store and build fresh.
+	 */ 
+    // need to store the number of digits already added to the store
+	int duration = 0;
+
+	duration = ast_tvdiff_sec(ast_tvnow(), p->dub_dtmf_store.last_received_digit_tv); 
+	if (duration > 3) {
+		/* clear existing pattern */
+		memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS); 
+	}
+	sprintf(p->dub_dtmf_store.pattern, "%s%c", p->dub_dtmf_store.pattern, digit);
+	p->dub_dtmf_store.last_received_digit_tv = ast_tvnow();
+
+	dub_channel_cmp_dtmf_pattern(p);
+
+	return;
+}
 
 /*! \brief  Receive SIP INFO Message */
 static void handle_request_info(struct sip_pvt *p, struct sip_request *req)
@@ -21606,6 +21656,7 @@ static void handle_request_info(struct sip_pvt *p, struct sip_request *req)
 				ast_verbose("* DTMF-relay event received: %c\n", (int) f.subclass.integer);
 			}
 		}
+		dub_channel_build_dtmf_pattern(p, buf[0]);
 		transmit_response(p, "200 OK", req);
 		return;
 	} else if (!strcasecmp(c, "application/media_control+xml")) {
@@ -31853,6 +31904,10 @@ static int reload_config(enum channelreloadreason reason)
 	ast_set_flag(&global_flags[2], SIP_PAGE3_NAT_AUTO_RPORT); /*!< Default to nat=auto_force_rport */
 	ast_copy_string(default_engine, DEFAULT_ENGINE, sizeof(default_engine));
 	ast_copy_string(default_parkinglot, DEFAULT_PARKINGLOT, sizeof(default_parkinglot));
+
+	/* DUB pause/resume recording */
+	//ast_copy_string(default_dub_pause_recording, DEFAULT_PAUSE_RESUME_RECORDING, sizeof(default_dub_pause_recording));
+	//ast_copy_string(default_dub_resume_recording, DEFAULT_PAUSE_RESUME_RECORDING, sizeof(default_dub_resume_recording)); 
 
 	/* Debugging settings, always default to off */
 	dumphistory = FALSE;
