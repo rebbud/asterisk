@@ -21519,14 +21519,14 @@ static void sip_dump_history(struct sip_pvt *dialog)
 /*! \brief  compare the received pattern against the configured one */
 static void dub_channel_cmp_dtmf_pattern(struct sip_pvt *p)
 {
-	ast_debug(3, "DUB: strcmp xpause=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord));
-	ast_debug(3, "DUB: strcmp xresume=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_resumeRecord));
+	ast_debug(5, "DUB: strcmp xpause=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord));
+	ast_debug(5, "DUB: strcmp xresume=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_resumeRecord));
 
 	if (!strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord) && 
 		!ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
 		/* DUB - Set flag to pause recording */
 		ast_set_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-		ast_debug(3, "DUB, compare %s and %s, set flag=%d\n", sip_cfg.dub_pauseRecord, p->dub_dtmf_store.pattern, 
+		ast_debug(5, "DUB, compare %s and %s, set flag=%d\n", sip_cfg.dub_pauseRecord, p->dub_dtmf_store.pattern, 
 				ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
 		memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS); 
 	}
@@ -21534,7 +21534,7 @@ static void dub_channel_cmp_dtmf_pattern(struct sip_pvt *p)
 		ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
 		/* DUB - Clear pause recording flag */
 		ast_clear_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-		ast_debug(3, "DUB, compare %s and %s, cleared flag=%d\n", sip_cfg.dub_resumeRecord, p->dub_dtmf_store.pattern, 
+		ast_debug(5, "DUB, compare %s and %s, cleared flag=%d\n", sip_cfg.dub_resumeRecord, p->dub_dtmf_store.pattern, 
 				ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
 		memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS); 
 	}
@@ -32502,7 +32502,7 @@ static int reload_config(enum channelreloadreason reason)
 			if (slen) {
 				if (slen < DUB_CMD_DIGITS) {
 					strncpy(sip_cfg.dub_pauseRecord, v->value, DUB_CMD_DIGITS-1);
-					ast_debug(1, "Setting pause_record=%s\n", sip_cfg.dub_pauseRecord);
+					ast_debug(5, "Setting pause_record=%s\n", sip_cfg.dub_pauseRecord);
 				} else {
 					ast_log(LOG_WARNING, "pause_record=%s exceeds maximum digits(%d)\n", v->value, DUB_CMD_DIGITS-1);
 				}
@@ -32512,7 +32512,7 @@ static int reload_config(enum channelreloadreason reason)
 			if (slen) {
 				if (slen < DUB_CMD_DIGITS) {
 					strncpy(sip_cfg.dub_resumeRecord, v->value, DUB_CMD_DIGITS-1);
-					ast_debug(1, "Setting resume_record=%s\n", sip_cfg.dub_resumeRecord);
+					ast_debug(5, "Setting resume_record=%s\n", sip_cfg.dub_resumeRecord);
 				} else {
 					ast_log(LOG_WARNING, "resume_record=%s exceeds maximum digits(%d)\n", v->value, DUB_CMD_DIGITS-1);
 				}
