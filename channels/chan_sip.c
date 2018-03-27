@@ -5753,16 +5753,16 @@ static int dialog_initialize_rtp(struct sip_pvt *dialog)
 		return -1;
 	}
 
-        /* We create a 2nd RTP instance for a 2nd audio stream (2nd m-line in the SDP offer  */
+	/* We create a 2nd RTP instance for a 2nd audio stream (2nd m-line in the SDP offer  */
 
-        ast_sockaddr_copy(&bindaddr_tmp, &bindaddr);
-        if (!(dialog->rtp2 = ast_rtp_instance_new(dialog->engine, sched, &bindaddr_tmp, NULL))) {
-                return -1;
-        }
+	ast_sockaddr_copy(&bindaddr_tmp, &bindaddr);
+	if (!(dialog->rtp2 = ast_rtp_instance_new(dialog->engine, sched, &bindaddr_tmp, NULL))) {
+		return -1;
+	}
 
-        if (!ast_test_flag(&dialog->flags[2], SIP_PAGE3_ICE_SUPPORT) && (ice = ast_rtp_instance_get_ice(dialog->rtp2))) {
-                ice->stop(dialog->rtp2);
-        }
+	if (!ast_test_flag(&dialog->flags[2], SIP_PAGE3_ICE_SUPPORT) && (ice = ast_rtp_instance_get_ice(dialog->rtp2))) {
+		ice->stop(dialog->rtp2);
+	}
 
 	if (ast_test_flag(&dialog->flags[1], SIP_PAGE2_VIDEOSUPPORT_ALWAYS) ||
 			(ast_test_flag(&dialog->flags[1], SIP_PAGE2_VIDEOSUPPORT) && (ast_format_cap_has_type(dialog->caps, AST_FORMAT_TYPE_VIDEO)))) {
@@ -7176,6 +7176,9 @@ static int sip_answer(struct ast_channel *ast)
 		ast_rtp_instance_update_source(p->rtp2);
 		res = transmit_response_with_sdp(p, "200 OK", &p->initreq, XMIT_CRITICAL, oldsdp, TRUE);
 		ast_set_flag(&p->flags[1], SIP_PAGE2_DIALOG_ESTABLISHED);
+		/* DBR: ast_poll listens on fdno 6 for rtp2 and fdno 7 for corresponding rtcp */
+		ast_channel_set_fd(p->owner, 6, ast_rtp_instance_fd(p->rtp2, 0));
+		ast_channel_set_fd(p->owner, 7, ast_rtp_instance_fd(p->rtp2, 1));
 		/* RFC says the session timer starts counting on 200,
 		 * not on INVITE. */
 		if (p->stimer->st_active == TRUE) {
@@ -8225,7 +8228,7 @@ static char *get_content(struct sip_request *req)
 static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p, int *faxdetect)
 {
 	/* Retrieve audio/etc from channel.  Assumes p->lock is already held. */
-	struct ast_frame *f = NULL, *f2 = NULL;
+	struct ast_frame *f = NULL;
 	
 	if (!p->rtp || !p->rtp2) {
 		/* We have no RTP allocated for this channel */
@@ -8235,36 +8238,25 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 	switch(ast_channel_fdno(ast)) {
 	case 0:
 		f = ast_rtp_instance_read(p->rtp, 0);	/* RTP Audio */
-		/* Audio packets sent to the 2nd RTP instance and  assigned to f->audio2 */
-		f2 = ast_rtp_instance_read(p->rtp2, 0);	/* RTP Audio2 */
 		if (f && (f->frametype == AST_FRAME_VOICE)) { /* RTP Audio */
 			/* Add flag to distinguish the stream */
 			ast_set_flag(f, AST_FRFLAG_STREAM1);
-			f->audio2 = NULL;
-			ast_debug(3, "STREAM1, frametype = %d, flag=%d\n", f->frametype,
-					ast_test_flag(f, AST_FRFLAG_STREAM1));
-			/* Not null frame, hence piggyback to be added to channel queue and 
-			 * also set flag to distinguish the stream */
-			if (f2->frametype == AST_FRAME_VOICE) {
-				f->audio2 = f2;
-				ast_set_flag(f2, AST_FRFLAG_STREAM2);
-				ast_debug(3, "PB STREAM2, frametype = %d, flag=%d\n", f2->frametype,
-						ast_test_flag(f2, AST_FRFLAG_STREAM2));
-			}
+			ast_debug(3, "read stream1\n");
 		}
-		else if (f2 && (f2->frametype == AST_FRAME_VOICE)) {   /* RTP Audio2 */
-			/* Audio packets sent to the 2nd RTP instance */
-			ast_set_flag(f2, AST_FRFLAG_STREAM2);
-			ast_debug(3, "STREAM2, frametype = %d, flag=%d\n", f2->frametype,
-					ast_test_flag(f2, AST_FRFLAG_STREAM2));
-			/* No piggybacking - make sure this gets added to channel queue */
-			f = f2;
-			f->audio2 = NULL;
+		break;
+	case 6:
+		/* Audio packets sent to the rtp2 instance */
+		f = ast_rtp_instance_read(p->rtp2, 0);	
+		if (f && (f->frametype == AST_FRAME_VOICE)) { 
+			ast_set_flag(f, AST_FRFLAG_STREAM2);
+			ast_debug(3, "read stream2\n");
 		}
 		break;
 	case 1:
 		f = ast_rtp_instance_read(p->rtp, 1);	/* RTCP Control Channel */
-		f->audio2 = ast_rtp_instance_read(p->rtp2, 1);	/* RTCP Control Channel */
+		break;
+	case 7:
+		f = ast_rtp_instance_read(p->rtp2, 1);	/* RTCP Control Channel for rtp2 instance */
 		break;
 	case 2:
 		f = ast_rtp_instance_read(p->vrtp, 0);	/* RTP Video */
@@ -8304,7 +8296,6 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 	if (f && (f->frametype == AST_FRAME_DTMF_BEGIN || f->frametype == AST_FRAME_DTMF_END) &&
 	    (ast_test_flag(&p->flags[0], SIP_DTMF) != SIP_DTMF_RFC2833)) {
 		ast_debug(1, "Ignoring DTMF (%c) RTP frame because dtmfmode is not RFC2833\n", f->subclass.integer);
-		ast_frfree(f->audio2);
 		ast_frfree(f);
 		return &ast_null_frame;
 	}
@@ -8312,10 +8303,6 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 	/* We already hold the channel lock */
 	if (!p->owner || (f && f->frametype != AST_FRAME_VOICE)) {
 		return f;
-	}
-/* same action for audio2 */
-	if (!p->owner || (f->audio2 && f->audio2->frametype != AST_FRAME_VOICE)) {
-		return f->audio2;
 	}
 
 	// Change channel native formats based on received and supported formats
@@ -8326,25 +8313,14 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 			ast_frfree(f);
 			return &ast_null_frame;
 		}
-		if (f->audio2 &&
-			!ast_format_cap_iscompatible(ast_channel_nativeformats(p->owner), &f->audio2->subclass.format) &&
-			!ast_format_cap_iscompatible(p->jointcaps, &f->audio2->subclass.format)) { 
-				ast_debug(1, "Bogus frame of format '%s' received from '%s'!\n",
-					ast_getformatname(&f->audio2->subclass.format), ast_channel_name(p->owner));
-				ast_frfree(f->audio2);
-				return &ast_null_frame;
-		}
 		ast_debug(1, "Oooh, format changed to %s\n", ast_getformatname(&f->subclass.format));
 		ast_format_cap_remove_bytype(ast_channel_nativeformats(p->owner), AST_FORMAT_TYPE_AUDIO);
 		ast_format_cap_add(ast_channel_nativeformats(p->owner), &f->subclass.format);
-		if (f->audio2)
-			ast_format_cap_add(ast_channel_nativeformats(p->owner), &f->audio2->subclass.format);
 		ast_set_read_format(p->owner, &f->subclass.format);
 		ast_set_write_format(p->owner, &f->subclass.format);
 	}
 
 	if (f && p->dsp) {
-/* We don't have to process f->audio2 here because this is contained in f :) */
 		f = ast_dsp_process(p->owner, p->dsp, f);
 		if (f && f->frametype == AST_FRAME_DTMF) {
 			if (f->subclass.integer == 'f') {
@@ -8409,9 +8385,7 @@ static struct ast_frame *sip_read(struct ast_channel *ast)
 
 	/* Only allow audio through if they sent progress with SDP, or if the channel is actually answered */
 	if (fr && fr->frametype == AST_FRAME_VOICE && p->invitestate != INV_EARLY_MEDIA && ast_channel_state(ast) != AST_STATE_UP) {
-		if (fr->audio2) ast_frfree(fr->audio2);
 		ast_frfree(fr);
-		fr->audio2 = &ast_null_frame;
 		fr = &ast_null_frame;
 	}
 
