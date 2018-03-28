@@ -3950,6 +3950,17 @@ void ast_channel_internal_fd_set(struct ast_channel *chan, int which, int value)
 int ast_channel_fd(const struct ast_channel *chan, int which);
 int ast_channel_fd_isset(const struct ast_channel *chan, int which);
 
+/*! DUB Change */
+long int ast_channel_get_s1_last_ts(const struct ast_channel *chan);
+long int ast_channel_get_s2_last_ts(const struct ast_channel *chan);
+long int ast_channel_set_s1_last_ts(struct ast_channel *chan, long int ts);
+long int ast_channel_set_s2_last_ts(struct ast_channel *chan, long int ts);
+
+int ast_channel_get_s1_last_seq(const struct ast_channel *chan);
+int ast_channel_get_s2_last_seq(const struct ast_channel *chan);
+int ast_channel_set_s1_last_seq(struct ast_channel *chan, int seq);
+int ast_channel_set_s2_last_seq(struct ast_channel *chan, int seq);
+
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL
 struct ast_epoll_data *ast_channel_internal_epfd_data(const struct ast_channel *chan, int which);
