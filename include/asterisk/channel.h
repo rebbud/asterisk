@@ -154,7 +154,7 @@ extern "C" {
 
 #define DATASTORE_INHERIT_FOREVER	INT_MAX
 
-#define AST_MAX_FDS		11
+#define AST_MAX_FDS		13
 /*
  * We have AST_MAX_FDS file descriptors in a channel.
  * Some of them have a fixed use:
