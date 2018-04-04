@@ -1030,12 +1030,14 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
 {
 	int last_seq=0, f_no=0, j=0;
-	long int ts_diff=0, f_ptime=20;
+	long int ts_diff=0, f_ptime;
 	short buf[f->samples];
         struct ast_frame *duped_frame = NULL;
 
 	if (stream_no == 1) {
-		f_ptime = ast_channel_get_s1_ptime(chan);
+		f_ptime=ast_channel_get_s1_ptime(chan);
+		if(f_ptime < 5)
+			f_ptime=20;
 
         	ts_diff = f->ts - ast_channel_get_s1_last_ts(chan);
         	last_seq = ast_channel_get_s1_last_seq(chan);
@@ -1046,7 +1048,9 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
         	ast_channel_set_s1_last_seq(chan, f->seqno);
 	} else {
 		f_ptime = ast_channel_get_s2_ptime(chan);
-
+		if(f_ptime < 5)
+                        f_ptime=20;
+		
 		ts_diff = f->ts - ast_channel_get_s2_last_ts(chan);
 		last_seq = ast_channel_get_s2_last_seq(chan);
 		f_no=ast_channel_get_s2_last_ts(chan)+f_ptime;
@@ -1056,7 +1060,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
                 ast_channel_set_s2_last_seq(chan, f->seqno);
 	}
 
-        ast_debug(3, "STREAM %d -- datalength: %d seqno: %d timestamp: %0.4f\n", stream_no, f->datalen, f->seqno, (float)f->ts/1000.00);
+        ast_debug(3, "STREAM %d -- len: %ld samples: %d datalength: %d seqno: %d timestamp: %0.4f ts: %ld\n", stream_no, f->len, f->samples, f->datalen, f->seqno, (float)f->ts/1000.00, f->ts);
 
         if (ts_diff >= (2*f_ptime)) { // Twice the ptime size
         	if ((f->seqno - last_seq) > 1)
