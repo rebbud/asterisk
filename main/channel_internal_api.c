@@ -195,10 +195,12 @@ struct ast_channel {
 	char dtmf_digit_to_emulate;			/*!< Digit being emulated */
 	char sending_dtmf_digit;			/*!< Digit this channel is currently sending out. (zero if not sending) */
 	struct timeval sending_dtmf_tv;			/*!< The time this channel started sending the current digit. (Invalid if sending_dtmf_digit is zero.) */
-	long int stream1_last_ts;                       /*! DUB change */
-        long int stream2_last_ts;
-        int s1_last_f_seq;
-        int s2_last_f_seq;
+	long int stream1_last_ts;                       /*! DUB - Last TS of Stream1 */
+        long int stream2_last_ts;			/*! DUB - Last TS of Stream2 */
+        int s1_last_f_seq;				/*! DUB - Last Frame SeqNo of Stream1 */
+        int s2_last_f_seq;				/*! DUB - Last Frame SeqNo of Stream2 */
+	long int packet_size_1;				/*! DUB - ptime of Stream1 */
+	long int packet_size_2;				/*! DUB - ptime of Stream2 */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1437,5 +1439,28 @@ int ast_channel_set_s2_last_seq(struct ast_channel *chan, int seq)
 {
         chan->s2_last_f_seq = seq;
         return chan->s2_last_f_seq;
+}
+
+/*! Get and Set ptime for Stream1 & Stream2 */
+long int ast_channel_get_s1_ptime(const struct ast_channel *chan)
+{
+        return chan->packet_size_1;
+}
+
+long int ast_channel_get_s2_ptime(const struct ast_channel *chan)
+{
+        return chan->packet_size_2;
+}
+
+long int ast_channel_set_s1_ptime(struct ast_channel *chan, long int s_ptime)
+{
+        chan->packet_size_1 = s_ptime;
+        return chan->packet_size_1;
+}
+
+long int ast_channel_set_s2_ptime(struct ast_channel *chan, long int s_ptime)
+{
+        chan->packet_size_2 = s_ptime;
+        return chan->packet_size_2;
 }
 

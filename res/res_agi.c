@@ -1026,25 +1026,30 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 	return cmd;
 }
 
+/*! DUB - Add Silence to the Recording file */
 static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
 {
 	int last_seq=0, f_no=0, j=0;
-	long int ts_diff=0;
+	long int ts_diff=0, f_ptime=20;
 	short buf[f->samples];
         struct ast_frame *duped_frame = NULL;
 
 	if (stream_no == 1) {
+		f_ptime = ast_channel_get_s1_ptime(chan);
+
         	ts_diff = f->ts - ast_channel_get_s1_last_ts(chan);
         	last_seq = ast_channel_get_s1_last_seq(chan);
-		f_no=ast_channel_get_s1_last_ts(chan)+20;
+		f_no=ast_channel_get_s1_last_ts(chan)+f_ptime;
 
 		/*! Save the ts and sequence number for the next check */
         	ast_channel_set_s1_last_ts(chan, f->ts);
         	ast_channel_set_s1_last_seq(chan, f->seqno);
 	} else {
+		f_ptime = ast_channel_get_s2_ptime(chan);
+
 		ts_diff = f->ts - ast_channel_get_s2_last_ts(chan);
 		last_seq = ast_channel_get_s2_last_seq(chan);
-		f_no=ast_channel_get_s2_last_ts(chan)+20;
+		f_no=ast_channel_get_s2_last_ts(chan)+f_ptime;
 
 		/*! Save the ts and sequence number for the next check */
                 ast_channel_set_s2_last_ts(chan, f->ts);
@@ -1053,7 +1058,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 
         ast_debug(3, "STREAM %d -- datalength: %d seqno: %d timestamp: %0.4f\n", stream_no, f->datalen, f->seqno, (float)f->ts/1000.00);
 
-        if (ts_diff >= 40) { // Next Frame recieveed should be at least 20ms added to the actual difference between of 20ms the 2 frames.
+        if (ts_diff >= (2*f_ptime)) { // Twice the ptime size
         	if ((f->seqno - last_seq) > 1)
                 	ast_log(LOG_WARNING, "STREAM %d -- GAP: %f\t No of Frames Lost: %d\n", stream_no, (float)ts_diff/1000.0, f->seqno - last_seq - 1);
                 else
@@ -1067,9 +1072,9 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
                 duped_frame->delivery.tv_sec -= (int) ts_diff/1000;
                 duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
 
-                for (f_no; f_no <= f->ts; f_no+=20) {
+                for (f_no; f_no <= f->ts; f_no+=f_ptime) {
                 	duped_frame->ts = f_no;
-                        duped_frame->delivery.tv_usec += 2000;
+                        duped_frame->delivery.tv_usec += (f_ptime*100);
                         duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
                         duped_frame->delivery.tv_usec %= 1000000;
 

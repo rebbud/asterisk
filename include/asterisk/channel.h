@@ -3961,6 +3961,11 @@ int ast_channel_get_s2_last_seq(const struct ast_channel *chan);
 int ast_channel_set_s1_last_seq(struct ast_channel *chan, int seq);
 int ast_channel_set_s2_last_seq(struct ast_channel *chan, int seq);
 
+long int ast_channel_get_s1_ptime(const struct ast_channel *chan);
+long int ast_channel_get_s2_ptime(const struct ast_channel *chan);
+long int ast_channel_set_s1_ptime(struct ast_channel *chan, long int s_ptime);
+long int ast_channel_set_s2_ptime(struct ast_channel *chan, long int s_ptime);
+
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL
 struct ast_epoll_data *ast_channel_internal_epfd_data(const struct ast_channel *chan, int which);
