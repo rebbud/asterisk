@@ -1034,6 +1034,23 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 	short buf[f->samples];
         struct ast_frame *duped_frame = NULL;
 
+	unsigned char g729_filler[] = {
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81
+        }; /*! BEST SO FAR - 2 */
+
 	if (stream_no == 1) {
 		f_ptime=ast_channel_get_s1_ptime(chan);
 		if(f_ptime < 5)
@@ -1070,7 +1087,18 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 
                 /* Lets try generating silent frame */
                 duped_frame = ast_frdup(f);
-                memset(buf, 0, sizeof(buf));
+
+		switch (f->subclass.format.id) {
+                case AST_FORMAT_G729A:
+                	memcpy(buf, g729_filler, f->len);
+                        break;
+                case AST_FORMAT_ULAW:
+                case AST_FORMAT_ALAW:
+                	memset(buf, 0, sizeof(buf));
+                	break;
+                default:
+                	memset(buf, 0, sizeof(buf));
+                }
 
                 duped_frame->data.ptr = &buf;
                 duped_frame->delivery.tv_sec -= (int) ts_diff/1000;
