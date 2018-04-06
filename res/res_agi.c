@@ -1031,7 +1031,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 {
 	int last_seq=0, f_no=0, j=0;
 	long int ts_diff=0, f_ptime;
-	short buf[f->samples];
+	short buf[f->datalen];
         struct ast_frame *duped_frame = NULL;
 
 	unsigned char g729_filler[] = {
@@ -1086,8 +1086,6 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
                 	ast_log(LOG_WARNING, "STREAM %d -- Frame (%d) receieved after %0.3f sec\n", stream_no, f->seqno, (float)ts_diff/1000.0);
 
                 /* Lets try generating silent frame */
-                duped_frame = ast_frdup(f);
-
 		switch (f->subclass.format.id) {
                 case AST_FORMAT_G729A:
                 	memcpy(buf, g729_filler, f->len);
@@ -1100,11 +1098,12 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
                 	memset(buf, 0, sizeof(buf));
                 }
 
+                duped_frame = ast_frdup(f);
                 duped_frame->data.ptr = &buf;
                 duped_frame->delivery.tv_sec -= (int) ts_diff/1000;
                 duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
 
-                for (f_no; f_no <= f->ts; f_no+=f_ptime) {
+                for (;f_no<f->ts;f_no+=f_ptime) {
                 	duped_frame->ts = f_no;
                         duped_frame->delivery.tv_usec += (f_ptime*100);
                         duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;

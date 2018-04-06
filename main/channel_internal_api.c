@@ -1406,16 +1406,14 @@ long int ast_channel_get_s2_last_ts(const struct ast_channel *chan)
         return chan->stream2_last_ts;
 }
 
-long int ast_channel_set_s1_last_ts(struct ast_channel *chan, long int ts)
+void ast_channel_set_s1_last_ts(struct ast_channel *chan, long int ts)
 {
         chan->stream1_last_ts = ts;
-        return chan->stream1_last_ts;
 }
 
-long int ast_channel_set_s2_last_ts(struct ast_channel *chan, long int ts)
+void ast_channel_set_s2_last_ts(struct ast_channel *chan, long int ts)
 {
         chan->stream2_last_ts = ts;
-        return chan->stream2_last_ts;
 }
 
 /*! Get and Set last stream sequence number */
@@ -1429,16 +1427,14 @@ int ast_channel_get_s2_last_seq(const struct ast_channel *chan)
         return chan->s2_last_f_seq;
 }
 
-int ast_channel_set_s1_last_seq(struct ast_channel *chan, int seq)
+void ast_channel_set_s1_last_seq(struct ast_channel *chan, int seq)
 {
         chan->s1_last_f_seq = seq;
-        return chan->s1_last_f_seq;
 }
 
-int ast_channel_set_s2_last_seq(struct ast_channel *chan, int seq)
+void ast_channel_set_s2_last_seq(struct ast_channel *chan, int seq)
 {
         chan->s2_last_f_seq = seq;
-        return chan->s2_last_f_seq;
 }
 
 /*! Get and Set ptime for Stream1 & Stream2 */
@@ -1452,15 +1448,13 @@ long int ast_channel_get_s2_ptime(const struct ast_channel *chan)
         return chan->packet_size_2;
 }
 
-long int ast_channel_set_s1_ptime(struct ast_channel *chan, long int s_ptime)
+void ast_channel_set_s1_ptime(struct ast_channel *chan, long int s_ptime)
 {
         chan->packet_size_1 = s_ptime;
-        return chan->packet_size_1;
 }
 
-long int ast_channel_set_s2_ptime(struct ast_channel *chan, long int s_ptime)
+void ast_channel_set_s2_ptime(struct ast_channel *chan, long int s_ptime)
 {
         chan->packet_size_2 = s_ptime;
-        return chan->packet_size_2;
 }
 
