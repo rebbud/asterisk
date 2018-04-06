@@ -1182,8 +1182,10 @@ struct sip_pvt {
 	                                         Used in peerpoke, mwi subscriptions */
 	struct sip_registry *registry;      /*!< If this is a REGISTER dialog, to which registry */
 	struct ast_rtp_instance *rtp;       /*!< RTP Session */
-// AQUI struct ast_rtp_instance *rtp2
-	struct ast_rtp_instance *rtp2;       /*!< RTP Session 2nd audio stream */
+	struct ast_rtp_instance *rtp2;      /*!< DUB - RTP Session 2nd audio stream */
+	long int packet_size;		    /*!< DUB - Temp Packet Size */
+	long int packet_size_1;		    /*!< DUB - Packet Size */
+	long int packet_size_2;		    /*!< DUB - Packet Size */
 	struct ast_rtp_instance *vrtp;      /*!< Video RTP session */
 	struct ast_rtp_instance *trtp;      /*!< Text RTP session */
 	struct sip_pkt *packets;            /*!< Packets scheduled for re-transmission */

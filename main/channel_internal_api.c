@@ -142,21 +142,21 @@ struct ast_channel {
 	struct ast_readq_list readq;
 	struct ast_jb jb;				/*!< The jitterbuffer state */
 	struct timeval dtmf_tv;				/*!< The time that an in process digit began, or the last digit ended */
-	struct ast_hangup_handler_list hangup_handlers;/*!< Hangup handlers on the channel. */
-	struct ast_datastore_list datastores; /*!< Data stores on the channel */
-	struct ast_autochan_list autochans; /*!< Autochans on the channel */
+	struct ast_hangup_handler_list hangup_handlers; /*!< Hangup handlers on the channel. */
+	struct ast_datastore_list datastores; 		/*!< Data stores on the channel */
+	struct ast_autochan_list autochans; 		/*!< Autochans on the channel */
 	unsigned long insmpl;				/*!< Track the read/written samples for monitor use */
 	unsigned long outsmpl;				/*!< Track the read/written samples for monitor use */
 
 	int fds[AST_MAX_FDS];				/*!< File descriptors for channel -- Drivers will poll on
 							 *   these file descriptors, so at least one must be non -1.
 							 *   See \arg \ref AstFileDesc */
-	int softhangup;				/*!< Whether or not we have been hung up...  Do not set this value
+	int softhangup;					/*!< Whether or not we have been hung up...  Do not set this value
 							 *   directly, use ast_softhangup() */
 	int fdno;					/*!< Which fd had an event detected on */
 	int streamid;					/*!< For streaming playback, the schedule ID */
 	int vstreamid;					/*!< For streaming video playback, the schedule ID */
-	struct ast_format oldwriteformat;  /*!< Original writer format */
+	struct ast_format oldwriteformat;  		/*!< Original writer format */
 	int timingfd;					/*!< Timing fd */
 	enum ast_channel_state state;			/*!< State of line -- Don't write directly, use ast_setstate() */
 	int rings;					/*!< Number of rings so far */
@@ -169,14 +169,14 @@ struct ast_channel {
 	unsigned int fout;				/*!< Frames out counters. The high bit is a debug mask, so
 							 *   the counter is only in the remaining bits */
 	int hangupcause;				/*!< Why is the channel hanged up. See causes.h */
-	unsigned int finalized:1;       /*!< Whether or not the channel has been successfully allocated */
+	unsigned int finalized:1;       		/*!< Whether or not the channel has been successfully allocated */
 	struct ast_flags flags;				/*!< channel flags of AST_FLAG_ type */
 	int alertpipe[2];
-	struct ast_format_cap *nativeformats;         /*!< Kinds of data this channel can natively handle */
-	struct ast_format readformat;            /*!< Requested read format (after translation) */
-	struct ast_format writeformat;           /*!< Requested write format (after translation) */
-	struct ast_format rawreadformat;         /*!< Raw read format (before translation) */
-	struct ast_format rawwriteformat;        /*!< Raw write format (before translation) */
+	struct ast_format_cap *nativeformats;         	/*!< Kinds of data this channel can natively handle */
+	struct ast_format readformat;            	/*!< Requested read format (after translation) */
+	struct ast_format writeformat;           	/*!< Requested write format (after translation) */
+	struct ast_format rawreadformat;         	/*!< Raw read format (before translation) */
+	struct ast_format rawwriteformat;       	/*!< Raw write format (before translation) */
 	unsigned int emulate_dtmf_duration;		/*!< Number of ms left to emulate DTMF for */
 #ifdef HAVE_EPOLL
 	int epfd;
@@ -194,7 +194,13 @@ struct ast_channel {
 	char macroexten[AST_MAX_EXTENSION];		/*!< Macro: Current non-macro extension. See app_macro.c */
 	char dtmf_digit_to_emulate;			/*!< Digit being emulated */
 	char sending_dtmf_digit;			/*!< Digit this channel is currently sending out. (zero if not sending) */
-	struct timeval sending_dtmf_tv;		/*!< The time this channel started sending the current digit. (Invalid if sending_dtmf_digit is zero.) */
+	struct timeval sending_dtmf_tv;			/*!< The time this channel started sending the current digit. (Invalid if sending_dtmf_digit is zero.) */
+	long int stream1_last_ts;                       /*! DUB - Last TS of Stream1 */
+        long int stream2_last_ts;			/*! DUB - Last TS of Stream2 */
+        int s1_last_f_seq;				/*! DUB - Last Frame SeqNo of Stream1 */
+        int s2_last_f_seq;				/*! DUB - Last Frame SeqNo of Stream2 */
+	long int packet_size_1;				/*! DUB - ptime of Stream1 */
+	long int packet_size_2;				/*! DUB - ptime of Stream2 */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1388,3 +1394,67 @@ int ast_channel_internal_is_finalized(struct ast_channel *chan)
 {
 	return chan->finalized;
 }
+
+/*! DUB change */
+long int ast_channel_get_s1_last_ts(const struct ast_channel *chan)
+{
+        return chan->stream1_last_ts;
+}
+
+long int ast_channel_get_s2_last_ts(const struct ast_channel *chan)
+{
+        return chan->stream2_last_ts;
+}
+
+void ast_channel_set_s1_last_ts(struct ast_channel *chan, long int ts)
+{
+        chan->stream1_last_ts = ts;
+}
+
+void ast_channel_set_s2_last_ts(struct ast_channel *chan, long int ts)
+{
+        chan->stream2_last_ts = ts;
+}
+
+/*! Get and Set last stream sequence number */
+int ast_channel_get_s1_last_seq(const struct ast_channel *chan)
+{
+        return chan->s1_last_f_seq;
+}
+
+int ast_channel_get_s2_last_seq(const struct ast_channel *chan)
+{
+        return chan->s2_last_f_seq;
+}
+
+void ast_channel_set_s1_last_seq(struct ast_channel *chan, int seq)
+{
+        chan->s1_last_f_seq = seq;
+}
+
+void ast_channel_set_s2_last_seq(struct ast_channel *chan, int seq)
+{
+        chan->s2_last_f_seq = seq;
+}
+
+/*! Get and Set ptime for Stream1 & Stream2 */
+long int ast_channel_get_s1_ptime(const struct ast_channel *chan)
+{
+        return chan->packet_size_1;
+}
+
+long int ast_channel_get_s2_ptime(const struct ast_channel *chan)
+{
+        return chan->packet_size_2;
+}
+
+void ast_channel_set_s1_ptime(struct ast_channel *chan, long int s_ptime)
+{
+        chan->packet_size_1 = s_ptime;
+}
+
+void ast_channel_set_s2_ptime(struct ast_channel *chan, long int s_ptime)
+{
+        chan->packet_size_2 = s_ptime;
+}
+

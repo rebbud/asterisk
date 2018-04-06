@@ -10484,6 +10484,12 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 			goto process_sdp_cleanup_b;
 		}
 
+		/*! DUB */
+		if (maudioLines == 0)
+			p->packet_size_1 = p->packet_size;
+		else if(maudioLines == 1)
+			p->packet_size_2 = p->packet_size;
+		
 		maudioLines++; // next m-audio line - array index
 	} // !ast_strlen_zero(nextm)
 
@@ -11170,6 +11176,9 @@ static int process_sdp_a_audio(const char *a, struct sip_pvt *p, struct ast_rtp_
 				framing = 0;
 				ast_debug(1, "Can't read framing from SDP: %s\n", a);
 			}
+
+			/*! DUB - Set the framing for the m-line */
+			p->packet_size = framing;
 		}
 		if (framing && p->autoframing) {
 			struct ast_codec_pref *pref = &ast_rtp_instance_get_codecs(p->rtp)->pref;
@@ -13438,15 +13447,18 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 			if (!(ast_codec_pref_index(&p->prefs, x, &pref)))
 				break;
 
-			if (!ast_format_cap_get_compatible_format(tmpcap, &pref, &tmp_fmt))
-                ast_debug(3, "add_sdp: cannot get compatible format, %s\n", ast_getformatname(&tmp_fmt));
+			if (!ast_format_cap_get_compatible_format(tmpcap, &pref, &tmp_fmt)){
+                		ast_debug(3, "add_sdp: cannot get compatible format, %s\n", ast_getformatname(&tmp_fmt));
 				continue;
+			}
 
-			if (ast_format_cap_iscompatible(alreadysent, &tmp_fmt))
-                ast_debug(3, "add_sdp: is compatible, %s\n", ast_getformatname(&tmp_fmt));
+			if (ast_format_cap_iscompatible(alreadysent, &tmp_fmt)){
+                		ast_debug(3, "add_sdp: is compatible, %s\n", ast_getformatname(&tmp_fmt));
 				continue;
-
-            ast_debug(3, "add_sdp: add preferred audio codecs,%s, %s\n", ast_getformatname(&pref), ast_getformatname(&tmp_fmt));
+			} 
+	
+			/* DUB */
+            		ast_debug(3, "add_sdp: add preferred audio codecs,%s, %s\n", ast_getformatname(&pref), ast_getformatname(&tmp_fmt));
 			if (AST_FORMAT_GET_TYPE(tmp_fmt.id) == AST_FORMAT_TYPE_AUDIO) {
 				add_codec_to_sdp(p, &tmp_fmt, &m_audio, &a_audio, debug, &min_audio_packet_size, 0);
 				add_codec_to_sdp(p, &tmp_fmt, &m_audio2, &a_audio2, debug, &min_audio_packet_size2, 1);
@@ -13468,7 +13480,7 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 				continue;
 
 			if (AST_FORMAT_GET_TYPE(tmp_fmt.id) == AST_FORMAT_TYPE_AUDIO) {
-                ast_debug(3, "add_sdp: add common audio codecs, %s\n", ast_getformatname(&tmp_fmt));
+                		ast_debug(3, "add_sdp: add common audio codecs, %s\n", ast_getformatname(&tmp_fmt));
 				add_codec_to_sdp(p, &tmp_fmt, &m_audio, &a_audio, debug, &min_audio_packet_size, 0);
 				add_codec_to_sdp(p, &tmp_fmt, &m_audio2, &a_audio2, debug, &min_audio_packet_size2, 1);
 			} else if (needvideo && (AST_FORMAT_GET_TYPE(tmp_fmt.id) == AST_FORMAT_TYPE_VIDEO)) {
@@ -26411,6 +26423,10 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 			transmit_response(p, "100 Trying", req);
 			break;
 		}
+
+		/* DUB - Set the ptime / framing for both the stream lines in the channel variables  */
+		ast_channel_set_s1_ptime(c, p->packet_size_1);
+		ast_channel_set_s2_ptime(c, p->packet_size_2);
 	} else {
 		if (!req->ignore && p && (p->autokillid == -1)) {
 			const char *msg;

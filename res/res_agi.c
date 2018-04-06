@@ -1026,6 +1026,102 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 	return cmd;
 }
 
+/*! DUB - Add Silence to the Recording file */
+static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
+{
+	int last_seq=0, f_no=0, j=0;
+	long int ts_diff=0, f_ptime;
+	short buf[f->datalen];
+        struct ast_frame *duped_frame = NULL;
+
+	unsigned char g729_filler[] = {
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+                114, 170, 255, 103, 54, 82, 216, 110, 255, 81
+        }; /*! BEST SO FAR - 2 */
+
+	if (stream_no == 1) {
+		f_ptime=ast_channel_get_s1_ptime(chan);
+		if(f_ptime < 5)
+			f_ptime=20;
+
+        	ts_diff = f->ts - ast_channel_get_s1_last_ts(chan);
+        	last_seq = ast_channel_get_s1_last_seq(chan);
+		f_no=ast_channel_get_s1_last_ts(chan)+f_ptime;
+
+		/*! Save the ts and sequence number for the next check */
+        	ast_channel_set_s1_last_ts(chan, f->ts);
+        	ast_channel_set_s1_last_seq(chan, f->seqno);
+	} else {
+		f_ptime = ast_channel_get_s2_ptime(chan);
+		if(f_ptime < 5)
+                        f_ptime=20;
+		
+		ts_diff = f->ts - ast_channel_get_s2_last_ts(chan);
+		last_seq = ast_channel_get_s2_last_seq(chan);
+		f_no=ast_channel_get_s2_last_ts(chan)+f_ptime;
+
+		/*! Save the ts and sequence number for the next check */
+                ast_channel_set_s2_last_ts(chan, f->ts);
+                ast_channel_set_s2_last_seq(chan, f->seqno);
+	}
+
+        ast_debug(3, "STREAM %d -- len: %ld samples: %d datalength: %d seqno: %d timestamp: %0.4f ts: %ld\n", stream_no, f->len, f->samples, f->datalen, f->seqno, (float)f->ts/1000.00, f->ts);
+
+        if (ts_diff >= (2*f_ptime)) { // Twice the ptime size
+        	if ((f->seqno - last_seq) > 1)
+                	ast_log(LOG_WARNING, "STREAM %d -- GAP: %f\t No of Frames Lost: %d\n", stream_no, (float)ts_diff/1000.0, f->seqno - last_seq - 1);
+                else
+                	ast_log(LOG_WARNING, "STREAM %d -- Frame (%d) receieved after %0.3f sec\n", stream_no, f->seqno, (float)ts_diff/1000.0);
+
+                /* Lets try generating silent frame */
+		switch (f->subclass.format.id) {
+                case AST_FORMAT_G729A:
+                	memcpy(buf, g729_filler, f->len);
+                        break;
+                case AST_FORMAT_ULAW:
+                case AST_FORMAT_ALAW:
+                	memset(buf, 0, sizeof(buf));
+                	break;
+                default:
+                	memset(buf, 0, sizeof(buf));
+                }
+
+                duped_frame = ast_frdup(f);
+                duped_frame->data.ptr = &buf;
+                duped_frame->delivery.tv_sec -= (int) ts_diff/1000;
+                duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
+
+                for (;f_no<f->ts;f_no+=f_ptime) {
+                	duped_frame->ts = f_no;
+                        duped_frame->delivery.tv_usec += (f_ptime*100);
+                        duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
+                        duped_frame->delivery.tv_usec %= 1000000;
+
+                        ast_debug(3, "STREAM %d - EXTRA FRAME - seqno: %d\t delivery_ts: %ld.%06ld\t ts: %ld\n", stream_no, duped_frame->seqno, duped_frame->delivery.tv_sec, duped_frame->delivery.tv_usec, duped_frame->ts);
+
+                        ast_writestream(fs, duped_frame);
+                        j++;
+               }
+
+               ast_log(LOG_WARNING, "STREAM %d -- %d EXTRA FRAME WRITTEN !!!\n", stream_no, j);
+               ast_frfree(duped_frame); /* free the duped_frame frame */
+	}
+
+	return 0;
+}
+
 /* channel is locked when calling this one either from the CLI or manager thread */
 static int add_agi_cmd(struct ast_channel *chan, const char *cmd_buff, const char *cmd_id)
 {
@@ -2459,12 +2555,13 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			case AST_FRAME_VOICE:
 				ast_debug(3, "%s flags = %u\n", ast_channel_name(chan), f->flags);
 				if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
-					ast_writestream(fs, f);
-					ast_debug(3, "write stream1\n");
-				}
-				else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
-					ast_writestream(fs2, f);
-					ast_debug(3, "write stream2\n");
+					ast_debug(3, "Write Stream1\n");
+					add_silence(chan, f, fs, 1);
+                                        ast_writestream(fs, f);
+				} else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
+                                        ast_debug(3, "Write Stream2\n");
+					add_silence(chan, f, fs2, 2);
+                                        ast_writestream(fs2, f);
 				}
 
 				/* this is a safe place to check progress since we know that fs
