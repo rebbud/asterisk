@@ -1029,8 +1029,8 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 /*! DUB - Add Silence to the Recording file */
 static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
 {
-	int last_seq=0, f_no=0, j=0;
-	long int ts_diff=0, f_ptime;
+	int f_no=0, j=0;
+        long int ts_diff=0, f_ptime, last_seq=0;
 	short buf[f->datalen];
         struct ast_frame *duped_frame = NULL;
 
@@ -1051,6 +1051,20 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
                 114, 170, 255, 103, 54, 82, 216, 110, 255, 81
         }; /*! BEST SO FAR - 2 */
 
+        if ((stream_no == 1) && (ast_channel_get_s1_pkt_count(chan) == 0)){
+                /*! Save the ts and sequence number for the next check */
+                ast_channel_set_s1_last_ts(chan, f->ts);
+                ast_channel_set_s1_last_seq(chan, f->seqno);
+                ast_channel_set_s1_pkt_count(chan);
+                return 0;
+        }else if ((stream_no == 2) && (ast_channel_get_s2_pkt_count(chan) == 0)) {
+                /*! Save the ts and sequence number for the next check */
+                ast_channel_set_s2_last_ts(chan, f->ts);
+                ast_channel_set_s2_last_seq(chan, f->seqno);
+                st_channel_set_s2_pkt_count(chan);
+                return 0;
+        }
+
 	if (stream_no == 1) {
 		f_ptime=ast_channel_get_s1_ptime(chan);
 		if(f_ptime < 5)
@@ -1063,6 +1077,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 		/*! Save the ts and sequence number for the next check */
         	ast_channel_set_s1_last_ts(chan, f->ts);
         	ast_channel_set_s1_last_seq(chan, f->seqno);
+		ast_channel_set_s1_pkt_count(chan);
 	} else {
 		f_ptime = ast_channel_get_s2_ptime(chan);
 		if(f_ptime < 5)
@@ -1075,6 +1090,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 		/*! Save the ts and sequence number for the next check */
                 ast_channel_set_s2_last_ts(chan, f->ts);
                 ast_channel_set_s2_last_seq(chan, f->seqno);
+		ast_channel_set_s2_pkt_count(chan);
 	}
 
         ast_debug(3, "STREAM %d -- len: %ld samples: %d datalength: %d seqno: %d timestamp: %0.4f ts: %ld\n", stream_no, f->len, f->samples, f->datalen, f->seqno, (float)f->ts/1000.00, f->ts);
