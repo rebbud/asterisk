@@ -203,6 +203,7 @@ struct ast_channel {
         long int s2_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream2 */
 	long int packet_size_1;				/*!< DUB - ptime of Stream1 */
 	long int packet_size_2;				/*!< DUB - ptime of Stream2 */
+	struct timeval rec_start_time;			/*!< DUB - Recording Start time */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1458,6 +1459,17 @@ void ast_channel_set_s1_last_seq(struct ast_channel *chan, long int seq)
 void ast_channel_set_s2_last_seq(struct ast_channel *chan, long int seq)
 {
         chan->s2_last_f_seq = seq;
+}
+
+/*! Set the recording start time */
+void ast_channel_set_rec_start_time(struct ast_channel *chan)
+{
+	chan->rec_start_time = ast_tvnow();
+}
+
+struct timeval ast_channel_get_rec_start_time(struct ast_channel *chan)
+{
+	return chan->rec_start_time;
 }
 
 /*! Get and Set ptime for Stream1 & Stream2 */

@@ -3961,6 +3961,9 @@ long int ast_channel_get_s2_last_ts(const struct ast_channel *chan);
 void ast_channel_set_s1_last_ts(struct ast_channel *chan, long int ts);
 void ast_channel_set_s2_last_ts(struct ast_channel *chan, long int ts);
 
+void ast_channel_set_rec_start_time(struct ast_channel *chan);
+struct timeval ast_channel_get_rec_start_time(struct ast_channel *chan);
+
 long int ast_channel_get_s1_last_seq(const struct ast_channel *chan);
 long int ast_channel_get_s2_last_seq(const struct ast_channel *chan);
 void ast_channel_set_s1_last_seq(struct ast_channel *chan, long int seq);
