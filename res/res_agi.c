@@ -1094,8 +1094,8 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 
         if ((stream_no == 1) && (ast_channel_get_s1_pkt_count(chan) == 0)){
                 /*! Save the ts and sequence number for the next check */
-                ast_channel_set_s1_last_ts(chan, f->ts);
-                ast_channel_set_s1_last_seq(chan, f->seqno);
+                //ast_channel_set_s1_last_ts(chan, f->ts);
+                //ast_channel_set_s1_last_seq(chan, f->seqno);
                 ast_channel_set_s1_pkt_count(chan);
 		f_ptime=ast_channel_get_s1_ptime(chan);
                 if(f_ptime < 5)
@@ -1103,18 +1103,22 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 
 		if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
 			ast_channel_set_rec_start_time(chan);
-			return 0;
+			//return 0;
 		}else {
 			gap_ms = ast_tvdiff_ms(ast_tvnow(), s_tv);
 
 			if ((gap_ms/f_ptime) > 1){
 				ast_log(LOG_NOTICE, "Stream 1 delayed by %ld...\n", gap_ms);
-				
-				//insert_silence(chan, f, fs, stream_no, f_no, f_ptime, ts_diff);
+				ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, gap_ms, f->ts, ast_channel_get_s1_last_ts(chan));
+
+                                insert_silence(chan, f, fs, stream_no, 0, f_ptime, gap_ms, gap_ms);
 			} else { 
 				ast_log(LOG_NOTICE, "No Delay on Stream 1 !!!\n");	
-				return 0;
+				//return 0;
 			}
+		ast_channel_set_s1_last_ts(chan, f->ts);
+                ast_channel_set_s1_last_seq(chan, f->seqno);
+                return 0;
 		}
         }else if ((stream_no == 2) && (ast_channel_get_s2_pkt_count(chan) == 0)) {
                 /*! Save the ts and sequence number for the next check */
@@ -1134,7 +1138,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
                         if ((gap_ms/f_ptime) > 1){
                                 ast_log(LOG_NOTICE, "Stream 2 delayed by %ld...\n", gap_ms);
 
-				ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, gap_ms, f->ts, ast_channel_get_s1_last_ts(chan));
+				ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, gap_ms, f->ts, ast_channel_get_s2_last_ts(chan));
 
 				insert_silence(chan, f, fs, stream_no, 0, f_ptime, gap_ms, gap_ms);
                         } else {
