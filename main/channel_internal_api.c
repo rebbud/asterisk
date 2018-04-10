@@ -195,12 +195,15 @@ struct ast_channel {
 	char dtmf_digit_to_emulate;			/*!< Digit being emulated */
 	char sending_dtmf_digit;			/*!< Digit this channel is currently sending out. (zero if not sending) */
 	struct timeval sending_dtmf_tv;			/*!< The time this channel started sending the current digit. (Invalid if sending_dtmf_digit is zero.) */
-	long int stream1_last_ts;                       /*! DUB - Last TS of Stream1 */
-        long int stream2_last_ts;			/*! DUB - Last TS of Stream2 */
-        int s1_last_f_seq;				/*! DUB - Last Frame SeqNo of Stream1 */
-        int s2_last_f_seq;				/*! DUB - Last Frame SeqNo of Stream2 */
-	long int packet_size_1;				/*! DUB - ptime of Stream1 */
-	long int packet_size_2;				/*! DUB - ptime of Stream2 */
+	long int s1_pkt_count;                          /*!< DUB - Count of packets on Stream1 */
+	long int s2_pkt_count;                          /*!< DUB - Count of packets on Stream2 */
+	long int stream1_last_ts;                       /*!< DUB - Last TS of Stream1 */
+        long int stream2_last_ts;			/*!< DUB - Last TS of Stream2 */
+        long int s1_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream1 */
+        long int s2_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream2 */
+	long int packet_size_1;				/*!< DUB - ptime of Stream1 */
+	long int packet_size_2;				/*!< DUB - ptime of Stream2 */
+	struct timeval rec_start_time;			/*!< DUB - Recording Start time */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1395,7 +1398,28 @@ int ast_channel_internal_is_finalized(struct ast_channel *chan)
 	return chan->finalized;
 }
 
-/*! DUB change */
+/*! DUB change - Get and Set the Stream Nos*/
+long int ast_channel_get_s1_pkt_count(const struct ast_channel *chan)
+{
+        return chan->s1_pkt_count;
+}
+
+long int ast_channel_get_s2_pkt_count(const struct ast_channel *chan)
+{
+        return chan->s2_pkt_count;
+}
+
+void ast_channel_set_s1_pkt_count(struct ast_channel *chan)
+{
+        chan->s1_pkt_count += 1;
+}
+
+void ast_channel_set_s2_pkt_count(struct ast_channel *chan)
+{
+        chan->s2_pkt_count += 1;
+}
+
+/*! Get and Set the last ts for Stream1 & Stream2 */
 long int ast_channel_get_s1_last_ts(const struct ast_channel *chan)
 {
         return chan->stream1_last_ts;
@@ -1417,24 +1441,35 @@ void ast_channel_set_s2_last_ts(struct ast_channel *chan, long int ts)
 }
 
 /*! Get and Set last stream sequence number */
-int ast_channel_get_s1_last_seq(const struct ast_channel *chan)
+long int ast_channel_get_s1_last_seq(const struct ast_channel *chan)
 {
         return chan->s1_last_f_seq;
 }
 
-int ast_channel_get_s2_last_seq(const struct ast_channel *chan)
+long int ast_channel_get_s2_last_seq(const struct ast_channel *chan)
 {
         return chan->s2_last_f_seq;
 }
 
-void ast_channel_set_s1_last_seq(struct ast_channel *chan, int seq)
+void ast_channel_set_s1_last_seq(struct ast_channel *chan, long int seq)
 {
         chan->s1_last_f_seq = seq;
 }
 
-void ast_channel_set_s2_last_seq(struct ast_channel *chan, int seq)
+void ast_channel_set_s2_last_seq(struct ast_channel *chan, long int seq)
 {
         chan->s2_last_f_seq = seq;
+}
+
+/*! Set the recording start time */
+void ast_channel_set_rec_start_time(struct ast_channel *chan)
+{
+	chan->rec_start_time = ast_tvnow();
+}
+
+struct timeval ast_channel_get_rec_start_time(struct ast_channel *chan)
+{
+	return chan->rec_start_time;
 }
 
 /*! Get and Set ptime for Stream1 & Stream2 */

@@ -1027,13 +1027,11 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 }
 
 /*! DUB - Add Silence to the Recording file */
-static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
+static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no, int f_no, long int f_ptime, long int ts_diff, long int to_ts)
 {
-	int last_seq=0, f_no=0, j=0;
-	long int ts_diff=0, f_ptime;
+	int j=0;
 	short buf[f->datalen];
-        struct ast_frame *duped_frame = NULL;
-
+	struct ast_frame *duped_frame = NULL;
 	unsigned char g729_filler[] = {
                 114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
                 114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
@@ -1051,6 +1049,108 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
                 114, 170, 255, 103, 54, 82, 216, 110, 255, 81
         }; /*! BEST SO FAR - 2 */
 
+	/* Lets try generating silent frame */
+        switch (f->subclass.format.id) {
+        case AST_FORMAT_G729A:
+        	memcpy(buf, g729_filler, f->len);
+                break;
+        case AST_FORMAT_ULAW:
+        case AST_FORMAT_ALAW:
+                memset(buf, 0, sizeof(buf));
+                break;
+        default:
+                memset(buf, 0, sizeof(buf));
+        }
+
+        duped_frame = ast_frdup(f);
+        duped_frame->data.ptr = &buf;
+        duped_frame->delivery.tv_sec -= (int) ts_diff/1000;
+        duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
+
+        //for (;f_no<f->ts;f_no+=f_ptime) {
+        for (;f_no<to_ts;f_no+=f_ptime) {
+        	duped_frame->ts = f_no;
+                duped_frame->delivery.tv_usec += (f_ptime*100);
+                duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
+                duped_frame->delivery.tv_usec %= 1000000;
+
+                ast_debug(3, "STREAM %d - EXTRA FRAME - seqno: %d\t delivery_ts: %ld.%06ld\t ts: %ld\n", stream_no, duped_frame->seqno, duped_frame->delivery.tv_sec, duped_frame->delivery.tv_usec, duped_frame->ts);
+
+                ast_writestream(fs, duped_frame);
+                j++;
+	}
+
+	ast_log(LOG_WARNING, "STREAM %d -- %d EXTRA FRAME WRITTEN !!!\n", stream_no, j);
+	ast_frfree(duped_frame); /* free the duped_frame frame */
+	return 0;
+}
+
+static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
+{
+	int f_no=0;
+        long int ts_diff=0, f_ptime, last_seq=0;
+	int64_t gap_ms=0;
+	struct timeval s_tv = ast_channel_get_rec_start_time(chan);
+
+        if ((stream_no == 1) && (ast_channel_get_s1_pkt_count(chan) == 0)){
+                /*! Save the ts and sequence number for the next check */
+                //ast_channel_set_s1_last_ts(chan, f->ts);
+                //ast_channel_set_s1_last_seq(chan, f->seqno);
+                ast_channel_set_s1_pkt_count(chan);
+		f_ptime=ast_channel_get_s1_ptime(chan);
+                if(f_ptime < 5)
+                        f_ptime=20;
+
+		if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
+			ast_channel_set_rec_start_time(chan);
+			//return 0;
+		}else {
+			gap_ms = ast_tvdiff_ms(ast_tvnow(), s_tv);
+
+			if ((gap_ms/f_ptime) > 1){
+				ast_log(LOG_NOTICE, "Stream 1 delayed by %ld...\n", gap_ms);
+				ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, gap_ms, f->ts, ast_channel_get_s1_last_ts(chan));
+
+                                insert_silence(chan, f, fs, stream_no, 0, f_ptime, gap_ms, gap_ms);
+			} else { 
+				ast_log(LOG_NOTICE, "No Delay on Stream 1 !!!\n");	
+				//return 0;
+			}
+		ast_channel_set_s1_last_ts(chan, f->ts);
+                ast_channel_set_s1_last_seq(chan, f->seqno);
+                return 0;
+		}
+        }else if ((stream_no == 2) && (ast_channel_get_s2_pkt_count(chan) == 0)) {
+                /*! Save the ts and sequence number for the next check */
+                //ast_channel_set_s2_last_ts(chan, f->ts);
+                //ast_channel_set_s2_last_seq(chan, f->seqno);
+                ast_channel_set_s2_pkt_count(chan);
+		f_ptime=ast_channel_get_s1_ptime(chan);
+                if(f_ptime < 5)
+                        f_ptime=20;
+
+		if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
+                        ast_channel_set_rec_start_time(chan);
+                        //return 0;
+                }else {
+                        gap_ms = ast_tvdiff_ms(ast_tvnow(), s_tv);
+
+                        if ((gap_ms/f_ptime) > 1){
+                                ast_log(LOG_NOTICE, "Stream 2 delayed by %ld...\n", gap_ms);
+
+				ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, gap_ms, f->ts, ast_channel_get_s2_last_ts(chan));
+
+				insert_silence(chan, f, fs, stream_no, 0, f_ptime, gap_ms, gap_ms);
+                        } else {
+                                ast_log(LOG_NOTICE, "No Delay on Stream 2 !!!\n");
+                        //	return 0;
+			}
+                }
+		ast_channel_set_s2_last_ts(chan, f->ts);
+                ast_channel_set_s2_last_seq(chan, f->seqno);
+		return 0;
+        }
+
 	if (stream_no == 1) {
 		f_ptime=ast_channel_get_s1_ptime(chan);
 		if(f_ptime < 5)
@@ -1060,9 +1160,13 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
         	last_seq = ast_channel_get_s1_last_seq(chan);
 		f_no=ast_channel_get_s1_last_ts(chan)+f_ptime;
 
+		if (ts_diff >= (2*f_ptime))
+			ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, ts_diff, f->ts, ast_channel_get_s1_last_ts(chan));
+
 		/*! Save the ts and sequence number for the next check */
         	ast_channel_set_s1_last_ts(chan, f->ts);
         	ast_channel_set_s1_last_seq(chan, f->seqno);
+		ast_channel_set_s1_pkt_count(chan);
 	} else {
 		f_ptime = ast_channel_get_s2_ptime(chan);
 		if(f_ptime < 5)
@@ -1072,51 +1176,24 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 		last_seq = ast_channel_get_s2_last_seq(chan);
 		f_no=ast_channel_get_s2_last_ts(chan)+f_ptime;
 
+		if (ts_diff >= (2*f_ptime))
+			ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, ts_diff, f->ts, ast_channel_get_s1_last_ts(chan));
+
 		/*! Save the ts and sequence number for the next check */
                 ast_channel_set_s2_last_ts(chan, f->ts);
                 ast_channel_set_s2_last_seq(chan, f->seqno);
+		ast_channel_set_s2_pkt_count(chan);
 	}
 
         ast_debug(3, "STREAM %d -- len: %ld samples: %d datalength: %d seqno: %d timestamp: %0.4f ts: %ld\n", stream_no, f->len, f->samples, f->datalen, f->seqno, (float)f->ts/1000.00, f->ts);
 
         if (ts_diff >= (2*f_ptime)) { // Twice the ptime size
         	if ((f->seqno - last_seq) > 1)
-                	ast_log(LOG_WARNING, "STREAM %d -- GAP: %f\t No of Frames Lost: %d\n", stream_no, (float)ts_diff/1000.0, f->seqno - last_seq - 1);
+                	ast_log(LOG_WARNING, "STREAM %d -- GAP: %f\t No of Frames Lost: %ld\n", stream_no, (float)ts_diff/1000.0, f->seqno - last_seq - 1);
                 else
                 	ast_log(LOG_WARNING, "STREAM %d -- Frame (%d) receieved after %0.3f sec\n", stream_no, f->seqno, (float)ts_diff/1000.0);
 
-                /* Lets try generating silent frame */
-		switch (f->subclass.format.id) {
-                case AST_FORMAT_G729A:
-                	memcpy(buf, g729_filler, f->len);
-                        break;
-                case AST_FORMAT_ULAW:
-                case AST_FORMAT_ALAW:
-                	memset(buf, 0, sizeof(buf));
-                	break;
-                default:
-                	memset(buf, 0, sizeof(buf));
-                }
-
-                duped_frame = ast_frdup(f);
-                duped_frame->data.ptr = &buf;
-                duped_frame->delivery.tv_sec -= (int) ts_diff/1000;
-                duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
-
-                for (;f_no<f->ts;f_no+=f_ptime) {
-                	duped_frame->ts = f_no;
-                        duped_frame->delivery.tv_usec += (f_ptime*100);
-                        duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
-                        duped_frame->delivery.tv_usec %= 1000000;
-
-                        ast_debug(3, "STREAM %d - EXTRA FRAME - seqno: %d\t delivery_ts: %ld.%06ld\t ts: %ld\n", stream_no, duped_frame->seqno, duped_frame->delivery.tv_sec, duped_frame->delivery.tv_usec, duped_frame->ts);
-
-                        ast_writestream(fs, duped_frame);
-                        j++;
-               }
-
-               ast_log(LOG_WARNING, "STREAM %d -- %d EXTRA FRAME WRITTEN !!!\n", stream_no, j);
-               ast_frfree(duped_frame); /* free the duped_frame frame */
+		insert_silence(chan, f, fs, stream_no, f_no, f_ptime, ts_diff, f->ts);
 	}
 
 	return 0;
