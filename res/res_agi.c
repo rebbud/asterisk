@@ -1027,7 +1027,7 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 }
 
 /*! DUB - Add Silence to the Recording file */
-static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no, int f_no, long int f_ptime, long int ts_diff, long int to_ts)
+static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no, int ts_start, long int f_ptime, long int ts_diff, long int ts_end)
 {
 	int j=0;
 	short buf[f->datalen];
@@ -1047,9 +1047,9 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
                 114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
                 114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
                 114, 170, 255, 103, 54, 82, 216, 110, 255, 81
-        }; /*! BEST SO FAR - 2 */
+        };
 
-	/* Lets try generating silent frame */
+	/* Generating silent frame */
         switch (f->subclass.format.id) {
         case AST_FORMAT_G729A:
         	memcpy(buf, g729_filler, f->len);
@@ -1067,9 +1067,8 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
         duped_frame->delivery.tv_sec -= (int) ts_diff/1000;
         duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
 
-        //for (;f_no<f->ts;f_no+=f_ptime) {
-        for (;f_no<to_ts;f_no+=f_ptime) {
-        	duped_frame->ts = f_no;
+        for (;ts_start<ts_end;ts_start+=f_ptime) {
+        	duped_frame->ts = ts_start;
                 duped_frame->delivery.tv_usec += (f_ptime*100);
                 duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
                 duped_frame->delivery.tv_usec %= 1000000;
@@ -1092,107 +1091,67 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 	int64_t gap_ms=0;
 	struct timeval s_tv = ast_channel_get_rec_start_time(chan);
 
-        if ((stream_no == 1) && (ast_channel_get_s1_pkt_count(chan) == 0)){
-                /*! Save the ts and sequence number for the next check */
-                //ast_channel_set_s1_last_ts(chan, f->ts);
-                //ast_channel_set_s1_last_seq(chan, f->seqno);
-                ast_channel_set_s1_pkt_count(chan);
-		f_ptime=ast_channel_get_s1_ptime(chan);
+	/*! First - Check if it is the 1st packet for the stream  */
+        if (ast_channel_get_pkt_count(chan, stream_no) == 0){
+		ast_log(LOG_NOTICE, "Stream %d: Processing 1st packet...\n", stream_no);
+                ast_channel_set_pkt_count(chan, stream_no);
+
+		f_ptime=ast_channel_get_ptime(chan, stream_no);
                 if(f_ptime < 5)
                         f_ptime=20;
 
 		if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
+			ast_log(LOG_NOTICE, "Stream %d: Setting the Record Start time...\n", stream_no);
 			ast_channel_set_rec_start_time(chan);
-			//return 0;
 		}else {
 			gap_ms = ast_tvdiff_ms(ast_tvnow(), s_tv);
 
 			if ((gap_ms/f_ptime) > 1){
-				ast_log(LOG_NOTICE, "Stream 1 delayed by %ld...\n", gap_ms);
-				ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, gap_ms, f->ts, ast_channel_get_s1_last_ts(chan));
+				ast_log(LOG_NOTICE, "Stream %d delayed by %ld...\n", stream_no, gap_ms);
+				ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, gap_ms, f->ts, ast_channel_get_last_ts(chan, stream_no));
 
+				/*!NOTE: For the initial stream delay we should not depend on the f->ts (as it can be any random value) so we use gap_ms to fill in silence */
                                 insert_silence(chan, f, fs, stream_no, 0, f_ptime, gap_ms, gap_ms);
 			} else { 
-				ast_log(LOG_NOTICE, "No Delay on Stream 1 !!!\n");	
-				//return 0;
+				ast_log(LOG_NOTICE, "No Delay on Stream %d !!!\n", stream_no);	
 			}
-		ast_channel_set_s1_last_ts(chan, f->ts);
-                ast_channel_set_s1_last_seq(chan, f->seqno);
-                return 0;
 		}
-        }else if ((stream_no == 2) && (ast_channel_get_s2_pkt_count(chan) == 0)) {
+
                 /*! Save the ts and sequence number for the next check */
-                //ast_channel_set_s2_last_ts(chan, f->ts);
-                //ast_channel_set_s2_last_seq(chan, f->seqno);
-                ast_channel_set_s2_pkt_count(chan);
-		f_ptime=ast_channel_get_s1_ptime(chan);
-                if(f_ptime < 5)
-                        f_ptime=20;
-
-		if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
-                        ast_channel_set_rec_start_time(chan);
-                        //return 0;
-                }else {
-                        gap_ms = ast_tvdiff_ms(ast_tvnow(), s_tv);
-
-                        if ((gap_ms/f_ptime) > 1){
-                                ast_log(LOG_NOTICE, "Stream 2 delayed by %ld...\n", gap_ms);
-
-				ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, gap_ms, f->ts, ast_channel_get_s2_last_ts(chan));
-
-				insert_silence(chan, f, fs, stream_no, 0, f_ptime, gap_ms, gap_ms);
-                        } else {
-                                ast_log(LOG_NOTICE, "No Delay on Stream 2 !!!\n");
-                        //	return 0;
-			}
-                }
-		ast_channel_set_s2_last_ts(chan, f->ts);
-                ast_channel_set_s2_last_seq(chan, f->seqno);
-		return 0;
-        }
-
-	if (stream_no == 1) {
-		f_ptime=ast_channel_get_s1_ptime(chan);
-		if(f_ptime < 5)
-			f_ptime=20;
-
-        	ts_diff = f->ts - ast_channel_get_s1_last_ts(chan);
-        	last_seq = ast_channel_get_s1_last_seq(chan);
-		f_no=ast_channel_get_s1_last_ts(chan)+f_ptime;
-
-		if (ts_diff >= (2*f_ptime))
-			ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, ts_diff, f->ts, ast_channel_get_s1_last_ts(chan));
-
-		/*! Save the ts and sequence number for the next check */
-        	ast_channel_set_s1_last_ts(chan, f->ts);
-        	ast_channel_set_s1_last_seq(chan, f->seqno);
-		ast_channel_set_s1_pkt_count(chan);
-	} else {
-		f_ptime = ast_channel_get_s2_ptime(chan);
-		if(f_ptime < 5)
-                        f_ptime=20;
-		
-		ts_diff = f->ts - ast_channel_get_s2_last_ts(chan);
-		last_seq = ast_channel_get_s2_last_seq(chan);
-		f_no=ast_channel_get_s2_last_ts(chan)+f_ptime;
-
-		if (ts_diff >= (2*f_ptime))
-			ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, ts_diff, f->ts, ast_channel_get_s1_last_ts(chan));
-
-		/*! Save the ts and sequence number for the next check */
-                ast_channel_set_s2_last_ts(chan, f->ts);
-                ast_channel_set_s2_last_seq(chan, f->seqno);
-		ast_channel_set_s2_pkt_count(chan);
+		ast_channel_set_last_ts(chan, f->ts, stream_no);
+                ast_channel_set_last_seq(chan, f->seqno, stream_no);
+                return 0;
 	}
+
+	f_ptime=ast_channel_get_ptime(chan, stream_no);
+	if(f_ptime < 5)
+		f_ptime=20;
+
+        ts_diff = f->ts - ast_channel_get_last_ts(chan, stream_no);
+        last_seq = ast_channel_get_last_seq(chan, stream_no);
+	f_no=ast_channel_get_last_ts(chan, stream_no)+f_ptime;
+
+	if (ts_diff >= (2*f_ptime))
+		ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, ts_diff, f->ts, ast_channel_get_last_ts(chan, stream_no));
+
+	/*! Save the ts and sequence number for the next check */
+        ast_channel_set_last_ts(chan, f->ts, stream_no);
+        ast_channel_set_last_seq(chan, f->seqno, stream_no);
+	ast_channel_set_pkt_count(chan, stream_no);
 
         ast_debug(3, "STREAM %d -- len: %ld samples: %d datalength: %d seqno: %d timestamp: %0.4f ts: %ld\n", stream_no, f->len, f->samples, f->datalen, f->seqno, (float)f->ts/1000.00, f->ts);
 
         if (ts_diff >= (2*f_ptime)) { // Twice the ptime size
         	if ((f->seqno - last_seq) > 1)
-                	ast_log(LOG_WARNING, "STREAM %d -- GAP: %f\t No of Frames Lost: %ld\n", stream_no, (float)ts_diff/1000.0, f->seqno - last_seq - 1);
+                	ast_log(LOG_WARNING, "STREAM %d -- GAP: %f\t No of Frames Lost: %ld\n", stream_no, (float)ts_diff/1000.0, ts_diff/f_ptime);
                 else
                 	ast_log(LOG_WARNING, "STREAM %d -- Frame (%d) receieved after %0.3f sec\n", stream_no, f->seqno, (float)ts_diff/1000.0);
 
+		/*! Insert Silence - by pasing
+		ts_start == (f_no) Last packet's ts incremented by f_ptime i.e. start of the ts for the 1st silent frame
+		f_ptime: ptime for the RTP stream
+		ts_diff: Difference in the ts for the current packet and last packet
+		ts_end === (f->ts) Current packet's ts value specifed for end of loop */
 		insert_silence(chan, f, fs, stream_no, f_no, f_ptime, ts_diff, f->ts);
 	}
 

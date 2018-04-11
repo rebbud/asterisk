@@ -1399,66 +1399,54 @@ int ast_channel_internal_is_finalized(struct ast_channel *chan)
 }
 
 /*! DUB change - Get and Set the Stream Nos*/
-long int ast_channel_get_s1_pkt_count(const struct ast_channel *chan)
+long int ast_channel_get_pkt_count(const struct ast_channel *chan, int stream_no)
 {
-        return chan->s1_pkt_count;
+	if (stream_no == 1)
+        	return chan->s1_pkt_count;
+	else if (stream_no == 2)
+		return chan->s2_pkt_count;
 }
 
-long int ast_channel_get_s2_pkt_count(const struct ast_channel *chan)
+void ast_channel_set_pkt_count(struct ast_channel *chan, int stream_no)
 {
-        return chan->s2_pkt_count;
-}
-
-void ast_channel_set_s1_pkt_count(struct ast_channel *chan)
-{
-        chan->s1_pkt_count += 1;
-}
-
-void ast_channel_set_s2_pkt_count(struct ast_channel *chan)
-{
-        chan->s2_pkt_count += 1;
+	if (stream_no == 1)
+        	chan->s1_pkt_count += 1;
+	else if (stream_no == 2)
+		chan->s2_pkt_count += 1;
 }
 
 /*! Get and Set the last ts for Stream1 & Stream2 */
-long int ast_channel_get_s1_last_ts(const struct ast_channel *chan)
+long int ast_channel_get_last_ts(const struct ast_channel *chan, int stream_no)
 {
-        return chan->stream1_last_ts;
+	if (stream_no == 1)
+        	return chan->stream1_last_ts;
+	else if (stream_no == 2)
+		return chan->stream2_last_ts;
 }
 
-long int ast_channel_get_s2_last_ts(const struct ast_channel *chan)
+void ast_channel_set_last_ts(struct ast_channel *chan, long int ts, int stream_no)
 {
-        return chan->stream2_last_ts;
-}
-
-void ast_channel_set_s1_last_ts(struct ast_channel *chan, long int ts)
-{
-        chan->stream1_last_ts = ts;
-}
-
-void ast_channel_set_s2_last_ts(struct ast_channel *chan, long int ts)
-{
-        chan->stream2_last_ts = ts;
+	if (stream_no == 1)
+        	chan->stream1_last_ts = ts;
+	else if (stream_no == 2)
+		chan->stream2_last_ts = ts;
 }
 
 /*! Get and Set last stream sequence number */
-long int ast_channel_get_s1_last_seq(const struct ast_channel *chan)
+long int ast_channel_get_last_seq(const struct ast_channel *chan, int stream_no)
 {
-        return chan->s1_last_f_seq;
+	if (stream_no == 1)
+        	return chan->s1_last_f_seq;
+	else if (stream_no == 2)
+		return chan->s2_last_f_seq;
 }
 
-long int ast_channel_get_s2_last_seq(const struct ast_channel *chan)
+void ast_channel_set_last_seq(struct ast_channel *chan, long int seq, int stream_no)
 {
-        return chan->s2_last_f_seq;
-}
-
-void ast_channel_set_s1_last_seq(struct ast_channel *chan, long int seq)
-{
-        chan->s1_last_f_seq = seq;
-}
-
-void ast_channel_set_s2_last_seq(struct ast_channel *chan, long int seq)
-{
-        chan->s2_last_f_seq = seq;
+	if (stream_no == 1)
+        	chan->s1_last_f_seq = seq;
+	else if (stream_no == 2)
+		chan->s2_last_f_seq = seq;
 }
 
 /*! Set the recording start time */
@@ -1473,23 +1461,19 @@ struct timeval ast_channel_get_rec_start_time(struct ast_channel *chan)
 }
 
 /*! Get and Set ptime for Stream1 & Stream2 */
-long int ast_channel_get_s1_ptime(const struct ast_channel *chan)
+long int ast_channel_get_ptime(const struct ast_channel *chan, int stream_no)
 {
-        return chan->packet_size_1;
+	if (stream_no == 1)
+        	return chan->packet_size_1;
+	else if (stream_no == 2)
+		return chan->packet_size_2;
 }
 
-long int ast_channel_get_s2_ptime(const struct ast_channel *chan)
+void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime, int stream_no)
 {
-        return chan->packet_size_2;
-}
-
-void ast_channel_set_s1_ptime(struct ast_channel *chan, long int s_ptime)
-{
-        chan->packet_size_1 = s_ptime;
-}
-
-void ast_channel_set_s2_ptime(struct ast_channel *chan, long int s_ptime)
-{
-        chan->packet_size_2 = s_ptime;
+	if (stream_no == 1)
+        	chan->packet_size_1 = s_ptime;
+	else if (stream_no == 2)
+		chan->packet_size_2 = s_ptime;
 }
 
