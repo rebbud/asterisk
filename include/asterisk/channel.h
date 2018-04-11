@@ -3966,6 +3966,8 @@ void ast_channel_set_last_seq(struct ast_channel *chan, long int seq, int stream
 long int ast_channel_get_ptime(const struct ast_channel *chan, int stream_no);
 void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime, int stream_no);
 
+void ast_channel_set_last_ssrc(struct ast_channel *chan, long int themssrc, int stream_no);
+
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL
 struct ast_epoll_data *ast_channel_internal_epfd_data(const struct ast_channel *chan, int which);

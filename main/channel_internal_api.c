@@ -204,6 +204,8 @@ struct ast_channel {
 	long int packet_size_1;				/*!< DUB - ptime of Stream1 */
 	long int packet_size_2;				/*!< DUB - ptime of Stream2 */
 	struct timeval rec_start_time;			/*!< DUB - Recording Start time */
+	unsigned int stream1_last_ssrc;			/*!< DUB - Last SSRC for stream 1 */
+	unsigned int stream2_last_ssrc;			/*!< DUB - Last SSRC for stream 2 */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1477,3 +1479,11 @@ void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime, int strea
 		chan->packet_size_2 = s_ptime;
 }
 
+/*!   */
+void ast_channel_set_last_ssrc(struct ast_channel *chan, long int themssrc, int stream_no)
+{
+        if (stream_no == 1)
+                chan->stream1_last_ssrc = themssrc;
+        else if (stream_no == 2)
+                chan->stream2_last_ssrc = themssrc;
+}
