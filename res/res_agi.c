@@ -1123,6 +1123,14 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
                 return 0;
 	}
 
+	/*! RTP Seq No Rollover  */
+	if (f->seqno == 65535){
+		ast_log(LOG_NOTICE, "RTP Seq No rollover on Stream %d !!!\n", stream_no);
+		ast_channel_set_last_ts(chan, f->ts, stream_no);
+                ast_channel_set_last_seq(chan, 0, stream_no); /* Reset the last Seq no for stream  */
+		return 0;
+	}
+
 	f_ptime=ast_channel_get_ptime(chan, stream_no);
 	if(f_ptime < 5)
 		f_ptime=20;
@@ -1133,11 +1141,6 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 
 	if (ts_diff >= (2*f_ptime))
 		ast_log(LOG_WARNING, "STREAM %d -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, ts_diff, f->ts, ast_channel_get_last_ts(chan, stream_no));
-
-	/*! Save the ts and sequence number for the next check */
-        ast_channel_set_last_ts(chan, f->ts, stream_no);
-        ast_channel_set_last_seq(chan, f->seqno, stream_no);
-	ast_channel_set_pkt_count(chan, stream_no);
 
         ast_debug(3, "STREAM %d -- len: %ld samples: %d datalength: %d seqno: %d timestamp: %0.4f ts: %ld\n", stream_no, f->len, f->samples, f->datalen, f->seqno, (float)f->ts/1000.00, f->ts);
 
@@ -1155,6 +1158,10 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 		insert_silence(chan, f, fs, stream_no, f_no, f_ptime, ts_diff, f->ts);
 	}
 
+	/*! Save the ts and sequence number for the next check */
+        ast_channel_set_last_ts(chan, f->ts, stream_no);
+        ast_channel_set_last_seq(chan, f->seqno, stream_no);
+        ast_channel_set_pkt_count(chan, stream_no);
 	return 0;
 }
 
