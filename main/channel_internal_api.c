@@ -204,6 +204,8 @@ struct ast_channel {
 	long int packet_size_1;				/*!< DUB - ptime of Stream1 */
 	long int packet_size_2;				/*!< DUB - ptime of Stream2 */
 	struct timeval rec_start_time;			/*!< DUB - Recording Start time */
+	struct timeval rec_s1_end_ts;			/*!< DUB - Recording Stream 1 end ts */
+	struct timeval rec_s2_end_ts;			/*!< DUB - Recording Stream 2 end ts */
 	unsigned int stream1_last_ssrc;			/*!< DUB - Last SSRC for stream 1 */
 	unsigned int stream2_last_ssrc;			/*!< DUB - Last SSRC for stream 2 */
 };
@@ -1462,6 +1464,23 @@ struct timeval ast_channel_get_rec_start_time(struct ast_channel *chan)
 	return chan->rec_start_time;
 }
 
+/*! Set and get recording end ts for streams */
+void ast_channel_set_rec_end_ts(struct ast_channel *chan, int stream_no)
+{
+	if (stream_no == 1)
+        	chan->rec_s1_end_ts = ast_tvnow();
+	else if (stream_no == 2)
+		chan->rec_s2_end_ts = ast_tvnow();
+}
+
+struct timeval ast_channel_get_rec_end_ts(struct ast_channel *chan, int stream_no)
+{
+	if (stream_no == 1)
+        	return chan->rec_s1_end_ts;
+	else if (stream_no == 2)
+		return chan->rec_s2_end_ts;
+}
+
 /*! Get and Set ptime for Stream1 & Stream2 */
 long int ast_channel_get_ptime(const struct ast_channel *chan, int stream_no)
 {
@@ -1479,11 +1498,19 @@ void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime, int strea
 		chan->packet_size_2 = s_ptime;
 }
 
-/*!   */
-void ast_channel_set_last_ssrc(struct ast_channel *chan, long int themssrc, int stream_no)
+/*! Set and Get last SSRC for streams  */
+void ast_channel_set_last_ssrc(struct ast_channel *chan, unsigned int themssrc, int stream_no)
 {
         if (stream_no == 1)
                 chan->stream1_last_ssrc = themssrc;
         else if (stream_no == 2)
                 chan->stream2_last_ssrc = themssrc;
+}
+
+unsigned int  ast_channel_get_last_ssrc(struct ast_channel *chan,  int stream_no)
+{
+        if (stream_no == 1)
+                return chan->stream1_last_ssrc;
+        else if (stream_no == 2)
+                return chan->stream2_last_ssrc;
 }

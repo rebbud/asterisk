@@ -3960,13 +3960,17 @@ void ast_channel_set_last_ts(struct ast_channel *chan, long int ts, int stream_n
 void ast_channel_set_rec_start_time(struct ast_channel *chan);
 struct timeval ast_channel_get_rec_start_time(struct ast_channel *chan);
 
+void ast_channel_set_rec_end_ts(struct ast_channel *chan, int stream_no);
+struct timeval ast_channel_get_rec_end_ts(struct ast_channel *chan, int stream_no);
+
 long int ast_channel_get_last_seq(const struct ast_channel *chan, int stream_no);
 void ast_channel_set_last_seq(struct ast_channel *chan, long int seq, int stream_no);
 
 long int ast_channel_get_ptime(const struct ast_channel *chan, int stream_no);
 void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime, int stream_no);
 
-void ast_channel_set_last_ssrc(struct ast_channel *chan, long int themssrc, int stream_no);
+void ast_channel_set_last_ssrc(struct ast_channel *chan, unsigned int themssrc, int stream_no);
+unsigned int  ast_channel_get_last_ssrc(struct ast_channel *chan,  int stream_no);
 
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL
