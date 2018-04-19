@@ -1087,7 +1087,8 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
 static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
 {
 	int f_no=0;
-        long int ts_diff=0, f_ptime, last_seq=0;
+        long int ts_diff=0, f_ptime; 
+	int last_seq=0;
 	int64_t gap_ms=0;
 	struct timeval s_tv = ast_channel_get_rec_start_time(chan);
 	unsigned int themssrc=0;
