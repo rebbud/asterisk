@@ -3951,28 +3951,26 @@ int ast_channel_fd(const struct ast_channel *chan, int which);
 int ast_channel_fd_isset(const struct ast_channel *chan, int which);
 
 /*! DUB Change */
-long int ast_channel_get_s1_pkt_count(const struct ast_channel *chan);
-long int ast_channel_get_s2_pkt_count(const struct ast_channel *chan);
-void ast_channel_set_s1_pkt_count(struct ast_channel *chan);
-void ast_channel_set_s2_pkt_count(struct ast_channel *chan);
+long int ast_channel_get_pkt_count(const struct ast_channel *chan, int stream_no);
+void ast_channel_set_pkt_count(struct ast_channel *chan, int stream_no);
 
-long int ast_channel_get_s1_last_ts(const struct ast_channel *chan);
-long int ast_channel_get_s2_last_ts(const struct ast_channel *chan);
-void ast_channel_set_s1_last_ts(struct ast_channel *chan, long int ts);
-void ast_channel_set_s2_last_ts(struct ast_channel *chan, long int ts);
+long int ast_channel_get_last_ts(const struct ast_channel *chan, int stream_no);
+void ast_channel_set_last_ts(struct ast_channel *chan, long int ts, int stream_no);
 
 void ast_channel_set_rec_start_time(struct ast_channel *chan);
 struct timeval ast_channel_get_rec_start_time(struct ast_channel *chan);
 
-long int ast_channel_get_s1_last_seq(const struct ast_channel *chan);
-long int ast_channel_get_s2_last_seq(const struct ast_channel *chan);
-void ast_channel_set_s1_last_seq(struct ast_channel *chan, long int seq);
-void ast_channel_set_s2_last_seq(struct ast_channel *chan, long int seq);
+void ast_channel_set_rec_end_ts(struct ast_channel *chan, int stream_no);
+struct timeval ast_channel_get_rec_end_ts(struct ast_channel *chan, int stream_no);
 
-long int ast_channel_get_s1_ptime(const struct ast_channel *chan);
-long int ast_channel_get_s2_ptime(const struct ast_channel *chan);
-void ast_channel_set_s1_ptime(struct ast_channel *chan, long int s_ptime);
-void ast_channel_set_s2_ptime(struct ast_channel *chan, long int s_ptime);
+long int ast_channel_get_last_seq(const struct ast_channel *chan, int stream_no);
+void ast_channel_set_last_seq(struct ast_channel *chan, long int seq, int stream_no);
+
+long int ast_channel_get_ptime(const struct ast_channel *chan, int stream_no);
+void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime, int stream_no);
+
+void ast_channel_set_last_ssrc(struct ast_channel *chan, unsigned int themssrc, int stream_no);
+unsigned int  ast_channel_get_last_ssrc(struct ast_channel *chan,  int stream_no);
 
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL

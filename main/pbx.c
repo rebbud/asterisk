@@ -6764,7 +6764,12 @@ static enum ast_pbx_result __ast_pbx_run(struct ast_channel *c,
 				ast_debug(1, "Spawn extension (%s,%s,%d) exited non-zero on '%s'\n", ast_channel_context(c), ast_channel_exten(c), ast_channel_priority(c), ast_channel_name(c));
 				ast_verb(2, "Spawn extension (%s, %s, %d) exited non-zero on '%s'\n", ast_channel_context(c), ast_channel_exten(c), ast_channel_priority(c), ast_channel_name(c));
 
-				ast_verb(2, "No Of Packets (S1): %ld\t No Of Packets (S2): %ld\n", ast_channel_get_s1_pkt_count(c), ast_channel_get_s2_pkt_count(c));
+				ast_verb(2, "%s: No Of Packets (S1): %ld\n", ast_channel_name(c), ast_channel_get_pkt_count(c, 1));
+				ast_verb(2, "%s: No Of Packets (S2): %ld\n", ast_channel_name(c), ast_channel_get_pkt_count(c, 2));
+	
+				struct timeval rec_end_ts = (ast_tvcmp(ast_channel_get_rec_end_ts(c,1), ast_channel_get_rec_end_ts(c,2))<0)?ast_channel_get_rec_end_ts(c,2):ast_channel_get_rec_end_ts(c,1);
+				int64_t rec_duration = ast_tvdiff_sec(rec_end_ts, ast_channel_get_rec_start_time(c));
+				ast_verb(2, "%s: Recording Duration (seconds): %ld\n", ast_channel_name(c), ++rec_duration);
 			
 				if ((res == AST_PBX_ERROR)
 					&& ast_exists_extension(c, ast_channel_context(c), "e", 1,

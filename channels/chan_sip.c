@@ -26425,8 +26425,8 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 		}
 
 		/* DUB - Set the ptime / framing for both the stream lines in the channel variables  */
-		ast_channel_set_s1_ptime(c, p->packet_size_1);
-		ast_channel_set_s2_ptime(c, p->packet_size_2);
+		ast_channel_set_ptime(c, p->packet_size_1, 1);
+		ast_channel_set_ptime(c, p->packet_size_2, 2);
 	} else {
 		if (!req->ignore && p && (p->autokillid == -1)) {
 			const char *msg;

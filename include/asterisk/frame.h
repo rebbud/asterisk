@@ -168,6 +168,8 @@ struct ast_frame {
 	long len;
 	/*! Sequence number */
 	int seqno;
+	/*! Stream SSRC */
+	unsigned int themssrc;
 };
 
 /*!

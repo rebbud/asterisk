@@ -4483,6 +4483,7 @@ static struct ast_frame *ast_rtp_read(struct ast_rtp_instance *instance, int rtc
 	rtp->f.data.ptr = rtp->rawdata + hdrlen + AST_FRIENDLY_OFFSET;
 	rtp->f.offset = hdrlen + AST_FRIENDLY_OFFSET;
 	rtp->f.seqno = seqno;
+	rtp->f.themssrc = rtp->rxssrc;
 
 	if (rtp->f.subclass.format.id == AST_FORMAT_T140 && (int)seqno - (prev_seqno+1) > 0 && (int)seqno - (prev_seqno+1) < 10) {
 		unsigned char *data = rtp->f.data.ptr;
