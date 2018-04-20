@@ -1052,7 +1052,7 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
 	/* Generating silent frame */
         switch (f->subclass.format.id) {
         case AST_FORMAT_G729A:
-        	memcpy(buf, g729_filler, f->len);
+        	memcpy(buf, g729_filler, f->datalen);
                 break;
         case AST_FORMAT_ULAW:
         case AST_FORMAT_ALAW:
@@ -1151,18 +1151,22 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 
 	ast_debug(3, "STREAM %d (SSRC: %u) -- len: %ld samples: %d datalength: %d seqno: %d timestamp: %0.4f ts: %ld\n", stream_no, themssrc, f->len, f->samples, f->datalen, f->seqno, (float)f->ts/1000.00, f->ts);
 
-        if (ts_diff >= (2*f_ptime)) { // Twice the ptime size because ts in the ast_frame is saved based on the f_time
-        	if ((f->seqno - last_seq) > 1)
-                	ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) Seqno (%d - %d) -- GAP: %f\t No of Frames Lost: %ld\n", stream_no, themssrc, f->seqno, last_seq, (float)ts_diff/1000.0, ts_diff/f_ptime);
-               	else
-                	ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) -- Frame (%d) receieved after %0.3f sec\n", stream_no, themssrc, f->seqno, (float)ts_diff/1000.0);
+	if((ts_diff/f_ptime) == (f->seqno - last_seq)) {
+        	if (ts_diff >= (2*f_ptime)) { // Twice the ptime size because ts in the ast_frame is saved based on the f_time
+        		if ((f->seqno - last_seq) > 1)
+                		ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) Seqno (%d - %d) -- GAP: %f\t No of Frames Lost: %ld\n", stream_no, themssrc, f->seqno, last_seq, (float)ts_diff/1000.0, ts_diff/f_ptime);
+               		else
+                		ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) -- Frame (%d) receieved after %0.3f sec\n", stream_no, themssrc, f->seqno, (float)ts_diff/1000.0);
 
-		/*! Insert Silence - by pasing
-		ts_start == (f_no) Last packet's ts incremented by f_ptime i.e. start of the ts for the 1st silent frame
-		f_ptime: ptime for the RTP stream
-		ts_diff: Difference in the ts for the current packet and last packet
-		ts_end === (f->ts) Current packet's ts value specifed for end of loop */
-		insert_silence(chan, f, fs, stream_no, f_no, f_ptime, ts_diff, f->ts, themssrc);
+			/*! Insert Silence - by pasing
+			ts_start == (f_no) Last packet's ts incremented by f_ptime i.e. start of the ts for the 1st silent frame
+			f_ptime: ptime for the RTP stream
+			ts_diff: Difference in the ts for the current packet and last packet
+			ts_end === (f->ts) Current packet's ts value specifed for end of loop */
+			insert_silence(chan, f, fs, stream_no, f_no, f_ptime, ts_diff, f->ts, themssrc);
+		}
+	} else {
+		ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) -- No of frames based on TS are not equal to the difference in seqnos\n",stream_no, themssrc);
 	}
 
 	/*! Save the ts and sequence number for the next check */
