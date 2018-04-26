@@ -3954,6 +3954,9 @@ int ast_channel_fd_isset(const struct ast_channel *chan, int which);
 long int ast_channel_get_pkt_count(const struct ast_channel *chan, int stream_no);
 void ast_channel_set_pkt_count(struct ast_channel *chan, int stream_no);
 
+long int ast_channel_get_extra_pkt_count(const struct ast_channel *chan, int stream_no);
+void ast_channel_set_extra_pkt_count(struct ast_channel *chan, int stream_no, int count);
+
 long int ast_channel_get_last_ts(const struct ast_channel *chan, int stream_no);
 void ast_channel_set_last_ts(struct ast_channel *chan, long int ts, int stream_no);
 
