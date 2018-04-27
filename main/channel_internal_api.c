@@ -197,6 +197,8 @@ struct ast_channel {
 	struct timeval sending_dtmf_tv;			/*!< The time this channel started sending the current digit. (Invalid if sending_dtmf_digit is zero.) */
 	long int s1_pkt_count;                          /*!< DUB - Count of packets on Stream1 */
 	long int s2_pkt_count;                          /*!< DUB - Count of packets on Stream2 */
+	long int s1_extra_pkt;				/*!< DUB - Count of extra packets on Stream1 */
+	long int s2_extra_pkt;				/*!< DUB - Count of extra packets on Stream2 */
 	long int stream1_last_ts;                       /*!< DUB - Last TS of Stream1 */
         long int stream2_last_ts;			/*!< DUB - Last TS of Stream2 */
         long int s1_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream1 */
@@ -1417,6 +1419,23 @@ void ast_channel_set_pkt_count(struct ast_channel *chan, int stream_no)
         	chan->s1_pkt_count += 1;
 	else if (stream_no == 2)
 		chan->s2_pkt_count += 1;
+}
+
+/*! Get and set extra packets written for Stream1 and Stream2 */
+long int ast_channel_get_extra_pkt_count(const struct ast_channel *chan, int stream_no)
+{
+        if (stream_no == 1)
+                return chan->s1_extra_pkt;
+        else if (stream_no == 2)
+                return chan->s2_extra_pkt;
+}
+
+void ast_channel_set_extra_pkt_count(struct ast_channel *chan, int stream_no, int count)
+{
+        if (stream_no == 1)
+                chan->s1_extra_pkt += count;
+        else if (stream_no == 2)
+                chan->s2_extra_pkt += count;
 }
 
 /*! Get and Set the last ts for Stream1 & Stream2 */

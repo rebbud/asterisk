@@ -6764,9 +6764,14 @@ static enum ast_pbx_result __ast_pbx_run(struct ast_channel *c,
 				ast_debug(1, "Spawn extension (%s,%s,%d) exited non-zero on '%s'\n", ast_channel_context(c), ast_channel_exten(c), ast_channel_priority(c), ast_channel_name(c));
 				ast_verb(2, "Spawn extension (%s, %s, %d) exited non-zero on '%s'\n", ast_channel_context(c), ast_channel_exten(c), ast_channel_priority(c), ast_channel_name(c));
 
-				ast_verb(2, "%s: No Of Packets (S1): %ld\n", ast_channel_name(c), ast_channel_get_pkt_count(c, 1));
-				ast_verb(2, "%s: No Of Packets (S2): %ld\n", ast_channel_name(c), ast_channel_get_pkt_count(c, 2));
-	
+				long int s1_rx_pkt = ast_channel_get_pkt_count(c, 1);
+				long int s2_rx_pkt = ast_channel_get_pkt_count(c, 2);
+				long int s1_ext_pkt = ast_channel_get_extra_pkt_count(c, 1);
+				long int s2_ext_pkt = ast_channel_get_extra_pkt_count(c, 2);
+ 
+				ast_verb(2, "%s: Stream 1: Rx Packets: %ld\t Extra Packets: %ld\t Total Packets: %ld\n", ast_channel_name(c), s1_rx_pkt, s1_ext_pkt, s1_rx_pkt+s1_ext_pkt);
+				ast_verb(2, "%s: Stream 2: Rx Packets: %ld\t Extra Packets: %ld\t Total Packets: %ld\n", ast_channel_name(c), s2_rx_pkt, s2_ext_pkt, s2_rx_pkt+s2_ext_pkt);
+					
 				struct timeval rec_end_ts = (ast_tvcmp(ast_channel_get_rec_end_ts(c,1), ast_channel_get_rec_end_ts(c,2))<0)?ast_channel_get_rec_end_ts(c,2):ast_channel_get_rec_end_ts(c,1);
 				int64_t rec_duration = ast_tvdiff_sec(rec_end_ts, ast_channel_get_rec_start_time(c));
 				ast_verb(2, "%s: Recording Duration (seconds): %ld\n", ast_channel_name(c), ++rec_duration);
