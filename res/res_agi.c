@@ -1026,7 +1026,7 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 	return cmd;
 }
 
-/*! DUB - Add Silence to the Recording file */
+/*! DUB - Add Silence to the Recording file 
 static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no, int ts_start, long int f_ptime, long int ts_diff, long int ts_end, unsigned int themssrc)
 {
 	int j=0;
@@ -1049,7 +1049,7 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
                 114, 170, 255, 103, 54, 82, 216, 110, 255, 81
         };
 
-	/* Generating silent frame */
+	// Generating silent frame 
         switch (f->subclass.format.id) {
         case AST_FORMAT_G729A:
         	memcpy(buf, g729_filler, f->datalen);
@@ -1081,7 +1081,7 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
 
 	ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) -- %d EXTRA FRAME WRITTEN !!!\n", stream_no, themssrc, j);
 	ast_channel_set_extra_pkt_count(chan, stream_no, j);
-	ast_frfree(duped_frame); /* free the duped_frame frame */
+	ast_frfree(duped_frame); // free the duped_frame frame 
 	return 0;
 }
 
@@ -1095,7 +1095,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 	unsigned int themssrc=0;
 	int ssrc_change=0;
 	
-        /*! Check SSRC */
+        // Check SSRC 
         if ((f->themssrc != 0) && (f->themssrc != ast_channel_get_last_ssrc(chan, stream_no))){
                 ast_log(LOG_NOTICE, "STREAM %d ==== SSRC changed (%u) to (%u)\n", stream_no, ast_channel_get_last_ssrc(chan, stream_no), f->themssrc);
                 ast_channel_set_last_ssrc(chan, f->themssrc, stream_no);
@@ -1108,12 +1108,12 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 		return 0;
 	}
 
-	/*! ptime for the stream */
+	// ptime for the stream
 	f_ptime=ast_channel_get_ptime(chan, stream_no);
 	if(f_ptime < 5)
 		f_ptime=20;
 
-	/*! First - Check if it is the 1st packet for the stream and fix the initial delay of streams */
+	// First - Check if it is the 1st packet for the stream and fix the initial delay of streams
         if ((ast_channel_get_pkt_count(chan, stream_no) == 0) || (ssrc_change == 1)){
 		ast_log(LOG_NOTICE, "Stream %d: Processing 1st packet (SSRC: %u)...\n", stream_no, themssrc);
                 ast_channel_set_pkt_count(chan, stream_no);
@@ -1132,14 +1132,14 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 				ast_log(LOG_WARNING, "Stream %d (SSRC: %u) delayed by %ld (ms)...\n", stream_no, themssrc, gap_ms);
 				ast_debug(1, "Stream %d (SSRC: %u) -- ts_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, themssrc, gap_ms, f->ts, ast_channel_get_last_ts(chan, stream_no));
 
-				/*!NOTE: For the initial stream delay we should not depend on the f->ts (as it can be any random value) so we use gap_ms to fill in silence */
+				// NOTE: For the initial stream delay we should not depend on the f->ts (as it can be any random value) so we use gap_ms to fill in silence
                                 insert_silence(chan, f, fs, stream_no, 0, f_ptime, gap_ms, gap_ms, themssrc);
 			} else { 
 				ast_log(LOG_NOTICE, "No Delay on Stream %d (SSRC: %u) !!!\n", stream_no, themssrc);	
 			}
 		}
 
-                /*! Save the ts and sequence number for the next check */
+                // Save the ts and sequence number for the next check
 		ast_channel_set_last_ts(chan, f->ts, stream_no);
                 ast_channel_set_last_seq(chan, f->seqno, stream_no);
         	ast_channel_set_rec_end_ts(chan, stream_no);
@@ -1159,24 +1159,184 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 	       	if (ts_diff >= (2*f_ptime)) { // Twice the ptime size because ts in the ast_frame is saved based on the f_ptime
         	       	ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) Seqno (%d - %d) -- GAP (Sec): %f\t No of Frames Lost: %ld\n", stream_no, themssrc, f->seqno, last_seq, (float)ts_diff/1000.0, (ts_diff/f_ptime)-1);
 
-			/*! Insert Silence - by pasing
-			ts_start == (f_no) Last packet's ts incremented by f_ptime i.e. start of the ts for the 1st silent frame
-			f_ptime: ptime for the RTP stream
-			ts_diff: Difference in the ts for the current packet and last packet
-			ts_end === (f->ts) Current packet's ts value specifed for end of loop */
+			// Insert Silence - by pasing
+			// ts_start == (f_no) Last packet's ts incremented by f_ptime i.e. start of the ts for the 1st silent frame
+			// f_ptime: ptime for the RTP stream
+			// ts_diff: Difference in the ts for the current packet and last packet
+			// ts_end === (f->ts) Current packet's ts value specifed for end of loop
 			insert_silence(chan, f, fs, stream_no, f_no, f_ptime, ts_diff, c_ts, themssrc);
 		}
 	} else {
 		ast_log(LOG_NOTICE, "Stream %d (SSRC: %u) -- (c_ts %ld - l_ts %ld) c_ts is either less than l_ts or diff is larger than 15 mins\n", stream_no, themssrc, c_ts, l_ts);
 	}
 
-	/*! Save the ts and sequence number for the next check */
+	// Save the ts and sequence number for the next check
         ast_channel_set_last_ts(chan, f->ts, stream_no);
         ast_channel_set_last_seq(chan, f->seqno, stream_no);
         ast_channel_set_pkt_count(chan, stream_no);
 	ast_channel_set_rec_end_ts(chan, stream_no);
 	return 0;
+} */
+
+// NEW LOGIC
+
+/*! DUB - Add Silence to the Recording file */
+static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no, long int ts_start, long int f_ptime, long int gap_ms, unsigned int themssrc)
+{
+    int j=0;
+    short buf[f->datalen];
+    struct ast_frame *duped_frame = NULL;
+    unsigned char g729_filler[] = {
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81
+    };
+    
+    /* Generating silent frame */
+    switch (f->subclass.format.id) {
+        case AST_FORMAT_G729A:
+            memcpy(buf, g729_filler, f->datalen);
+            break;
+        case AST_FORMAT_ULAW:
+        case AST_FORMAT_ALAW:
+            memset(buf, 0, sizeof(buf));
+            break;
+        default:
+            memset(buf, 0, sizeof(buf));
+    }
+    
+    duped_frame = ast_frdup(f);
+    duped_frame->data.ptr = &buf;
+    duped_frame->delivery.tv_sec -= (int) gap_ms/1000;
+    duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
+    
+    for (;ts_start<gap_ms;ts_start+=f_ptime) {
+        duped_frame->ts = ts_start;
+        duped_frame->delivery.tv_usec += (f_ptime*100);
+        duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
+        duped_frame->delivery.tv_usec %= 1000000;
+        
+        ast_debug(1, "STREAM %d (SSRC: %u) - EXTRA FRAME - seqno: %d\t delivery_ts: %ld.%06ld\t ts: %ld\n", stream_no, themssrc, duped_frame->seqno, duped_frame->delivery.tv_sec, duped_frame->delivery.tv_usec, duped_frame->ts);
+        
+        ast_writestream(fs, duped_frame);
+        j++;
+    }
+
+    ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) -- %d EXTRA FRAME WRITTEN !!!\n", stream_no, themssrc, j);
+    ast_channel_set_extra_pkt_count(chan, stream_no, j);
+    ast_frfree(duped_frame); /* free the duped_frame frame */
+    return 0;
 }
+
+static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
+{
+    long int f_no=0, l_no=0;
+    long int cs_pkt_count=0, os_pkt_count=0;
+    long int pkt_diff=0, f_ptime;
+    int last_seq=0;
+    int64_t gap_ms=0;
+    struct timeval s_tv = ast_channel_get_rec_start_time(chan);
+    unsigned int themssrc=0;
+    int ssrc_change=0;
+    
+    /*! Check SSRC */
+    if ((f->themssrc != 0) && (f->themssrc != ast_channel_get_last_ssrc(chan, stream_no))){
+        ast_log(LOG_NOTICE, "STREAM %d ==== SSRC changed (%u) to (%u)\n", stream_no, ast_channel_get_last_ssrc(chan, stream_no), f->themssrc);
+        ast_channel_set_last_ssrc(chan, f->themssrc, stream_no);
+        themssrc = f->themssrc;
+        ssrc_change=1;
+    } else if (f->themssrc == ast_channel_get_last_ssrc(chan, stream_no)) {
+        themssrc = ast_channel_get_last_ssrc(chan, stream_no);
+    }else {
+        //No Silence to be written just return back
+        return 0;
+    }
+    
+    /*! ptime for the stream */
+    f_ptime=ast_channel_get_ptime(chan, stream_no);
+    if(f_ptime < 5)
+        f_ptime=20;
+    
+    /*! First - Check if it is the 1st packet for the stream and fix the initial delay of streams */
+    if ((ast_channel_get_pkt_count(chan, stream_no) == 0) || (ssrc_change == 1)){
+        ast_log(LOG_NOTICE, "Stream %d: Processing 1st packet (SSRC: %u)...\n", stream_no, themssrc);
+        ast_channel_set_pkt_count(chan, stream_no);
+        
+        if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
+            ast_log(LOG_NOTICE, "Stream %d: Setting the Record Start time (SSRC: %u)...\n", stream_no, themssrc);
+            ast_channel_set_rec_start_time(chan);
+        }else {
+            if ((ssrc_change == 1) && (ast_tvcmp(ast_channel_get_rec_end_ts(chan, stream_no), ast_tv(0, 0)) > 0)){
+                s_tv = ast_channel_get_rec_end_ts(chan, stream_no);
+            }
+            
+            gap_ms = ast_tvdiff_ms(ast_tvnow(), s_tv);
+            
+            if ((gap_ms/f_ptime) > 2){ // Greater than twice the ptime
+                ast_log(LOG_WARNING, "Stream %d (SSRC: %u) delayed by %ld (ms)...\n", stream_no, themssrc, gap_ms);
+                ast_debug(1, "Stream %d (SSRC: %u) -- pkt_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, themssrc, gap_ms, f->ts, ast_channel_get_last_ts(chan, stream_no));
+                
+                /*!NOTE: For the initial stream delay we should not depend on the f->ts (as it can be any random value) so we use gap_ms to fill in silence */
+                insert_silence(chan, f, fs, stream_no, 0, f_ptime, gap_ms, themssrc);
+            } else {
+                ast_log(LOG_NOTICE, "No Delay on Stream %d (SSRC: %u) !!!\n", stream_no, themssrc);
+            }
+        }
+        
+        /*! Save the ts and sequence number for the next check */
+        ast_channel_set_last_ts(chan, f->ts, stream_no);
+        ast_channel_set_last_seq(chan, f->seqno, stream_no);
+        ast_channel_set_rec_end_ts(chan, stream_no);
+        return 0;
+    }
+    
+    cs_pkt_count = ast_channel_get_pkt_count(chan, stream_no) + ast_channel_get_extra_pkt_count(chan, stream_no);
+    os_pkt_count = stream_no==1?(ast_channel_get_pkt_count(chan, 2) + ast_channel_get_extra_pkt_count(chan, 2)):(ast_channel_get_pkt_count(chan, 1) + ast_channel_get_extra_pkt_count(chan, 1));
+    
+    if (cs_pkt_count < os_pkt_count){
+        pkt_diff = os_pkt_count - cs_pkt_count - 1;
+        
+        if (pkt_diff > 1) {
+            last_seq = ast_channel_get_last_seq(chan, stream_no);
+            f_no = ast_channel_get_last_ts(chan, stream_no)+f_ptime;
+	    l_no = (pkt_diff*f_ptime)+f_no;
+        
+            ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) Seqno (%d - %d) -- GAP (Sec): %ld\t No of Frames Lost: %ld\n", stream_no, themssrc, f->seqno, last_seq, pkt_diff*f_ptime, pkt_diff);
+            ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) Seqno (%d - %d) -- f_no: %ld\t l_no: %ld\tf_ptime: %ld\n", stream_no, themssrc, f->seqno, last_seq, f_no, l_no, f_ptime);
+            
+            /*! Insert Silence - by pasing
+             chan: The channel structure of the media stream
+             f: currently recieved media frame (ast_frame)
+             fs: media file where it has to be written
+             steam_no: which stream is getting updated
+             ts_star: f_no i.e. start of the ts for the 1st silent frame
+             f_ptime: ptime for the RTP stream
+             gap_ms: number of packets x p_time
+             pkt_diff: Difference in the ts for the current packet and last packet
+             themssrc: SSRC of the current media stream */
+            insert_silence(chan, f, fs, stream_no, f_no, f_ptime, l_no, themssrc);
+        }
+    }
+    
+    /*! Save the ts and sequence number for the next check */
+    ast_channel_set_last_ts(chan, f->ts, stream_no);
+    ast_channel_set_last_seq(chan, f->seqno, stream_no);
+    ast_channel_set_pkt_count(chan, stream_no);
+    ast_channel_set_rec_end_ts(chan, stream_no);
+    return 0;
+}
+
 
 /* channel is locked when calling this one either from the CLI or manager thread */
 static int add_agi_cmd(struct ast_channel *chan, const char *cmd_buff, const char *cmd_id)
