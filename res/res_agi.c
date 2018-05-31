@@ -1093,17 +1093,17 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     int last_seq=0;
     int64_t gap_ms=0;
     struct timeval s_tv = ast_channel_get_rec_start_time(chan);
-    unsigned int themssrc=0;
+    unsigned int themssrc=ast_channel_get_last_ssrc(chan, stream_no);
     int ssrc_change=0;
     
     /*! Check SSRC */
-    if ((f->themssrc != 0) && (f->themssrc != ast_channel_get_last_ssrc(chan, stream_no))){
-        ast_log(LOG_NOTICE, "STREAM %d ==== SSRC changed (%u) to (%u)\n", stream_no, ast_channel_get_last_ssrc(chan, stream_no), f->themssrc);
+    if ((f->themssrc != 0) && (f->themssrc != themssrc)){
+        ast_log(LOG_NOTICE, "STREAM %d ==== SSRC changed (%u) to (%u)\n", stream_no, themssrc, f->themssrc);
         ast_channel_set_last_ssrc(chan, f->themssrc, stream_no);
         themssrc = f->themssrc;
         ssrc_change=1;
-    } else if (f->themssrc == ast_channel_get_last_ssrc(chan, stream_no)) {
-        themssrc = ast_channel_get_last_ssrc(chan, stream_no);
+    } else if (f->themssrc == themssrc) {
+        //Same SSRC conti with the function
     }else {
         //No Silence to be written just return back
         return 0;
@@ -1148,7 +1148,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     }
     
     cs_pkt_count = ast_channel_get_pkt_count(chan, stream_no) + ast_channel_get_extra_pkt_count(chan, stream_no);
-    os_pkt_count = stream_no==1?(ast_channel_get_pkt_count(chan, 2) + ast_channel_get_extra_pkt_count(chan, 2)):(ast_channel_get_pkt_count(chan, 1) + ast_channel_get_extra_pkt_count(chan, 1));
+    os_pkt_count = ast_channel_get_pkt_count(chan, stream_no^0x03) + ast_channel_get_extra_pkt_count(chan, stream_no^0x03);
     
     if (cs_pkt_count < os_pkt_count){
         pkt_diff = os_pkt_count - cs_pkt_count - 1;
@@ -1165,10 +1165,9 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
              f: currently recieved media frame (ast_frame)
              fs: media file where it has to be written
              steam_no: which stream is getting updated
-             ts_star: f_no i.e. start of the ts for the 1st silent frame
+             ts_star: f_no i.e. It is the 1st timestamp of the silent frame to be inserted
              f_ptime: ptime for the RTP stream
-             gap_ms: number of packets x p_time
-             pkt_diff: Difference in the ts for the current packet and last packet
+             l_no: It is the timestamp of the last silent frame to be inserted 
              themssrc: SSRC of the current media stream */
             insert_silence(chan, f, fs, stream_no, f_no, f_ptime, l_no, themssrc);
         }
