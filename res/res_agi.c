@@ -1088,7 +1088,7 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
 static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
 {
     long int f_no=0, l_no=0;
-    long int cs_pkt_count=0, os_pkt_count=0;
+    long int cs_pkt_count=0, os_pkt_count=0, no_of_frames=0;
     long int pkt_diff=0, f_ptime;
     int last_seq=0;
     int64_t gap_ms=0;
@@ -1128,15 +1128,19 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
             }
             
             gap_ms = ast_tvdiff_ms(ast_tvnow(), s_tv);
+	    no_of_frames = gap_ms/f_ptime;
             
-            if ((gap_ms/f_ptime) > 2){ // Greater than twice the ptime
+            if ((no_of_frames > 2) && (no_of_frames < 360000)){ // Greater than 20 ms or less than 2 hours
                 ast_log(LOG_WARNING, "Stream %d (SSRC: %u) delayed by %ld (ms)...\n", stream_no, themssrc, gap_ms);
                 ast_debug(1, "Stream %d (SSRC: %u) -- pkt_diff: %ld\t f->ts: %ld\t last_ts: %ld\n", stream_no, themssrc, gap_ms, f->ts, ast_channel_get_last_ts(chan, stream_no));
                 
                 /*!NOTE: For the initial stream delay we should not depend on the f->ts (as it can be any random value) so we use gap_ms to fill in silence */
                 insert_silence(chan, f, fs, stream_no, 0, f_ptime, gap_ms, themssrc);
             } else {
-                ast_log(LOG_NOTICE, "No Delay on Stream %d (SSRC: %u) !!!\n", stream_no, themssrc);
+                if (no_of_frames > 360000)
+		    ast_log(LOG_ERROR, "Stream %d (SSRC: %u) delayed by %ld (ms) > (2 hours)...\n", stream_no, themssrc, gap_ms);
+		else
+                    ast_log(LOG_NOTICE, "No Delay on Stream %d (SSRC: %u) !!!\n", stream_no, themssrc);
             }
         }
         
@@ -1153,24 +1157,26 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     if (cs_pkt_count < os_pkt_count){
         pkt_diff = os_pkt_count - cs_pkt_count - 1;
         
-        if (pkt_diff > 1) {
+        if ((pkt_diff > 1) && (pkt_diff < 360000)) { // 1 < pkt_diff < 360000 (2 hours) 
             last_seq = ast_channel_get_last_seq(chan, stream_no);
             f_no = ast_channel_get_last_ts(chan, stream_no)+f_ptime;
 	    l_no = (pkt_diff*f_ptime)+f_no;
         
-            ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) Seqno (%d - %d) -- GAP (Sec): %ld\t No of Frames Lost: %ld\n", stream_no, themssrc, f->seqno, last_seq, pkt_diff*f_ptime, pkt_diff);
+            ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) Seqno (%d - %d) -- GAP (ms): %ld\t No of Frames Lost: %ld\n", stream_no, themssrc, f->seqno, last_seq, pkt_diff*f_ptime, pkt_diff);
             
             /*! Insert Silence - by pasing
              chan: The channel structure of the media stream
              f: currently recieved media frame (ast_frame)
              fs: media file where it has to be written
              steam_no: which stream is getting updated
-             ts_star: f_no i.e. It is the 1st timestamp of the silent frame to be inserted
+             f_no: It is the 1st timestamp of the silent frame to be inserted
              f_ptime: ptime for the RTP stream
              l_no: It is the timestamp of the last silent frame to be inserted 
              themssrc: SSRC of the current media stream */
             insert_silence(chan, f, fs, stream_no, f_no, f_ptime, l_no, themssrc);
-        }
+	}else if (pkt_diff > 360000){
+	        ast_log(LOG_ERROR, "STREAM %d (SSRC: %u) Seqno (%d - %d) -- CS_PKT_COUNT is greater than 360000 (2hours)\n", stream_no, themssrc, f->seqno, last_seq);
+	}
     }
     
     /*! Save the ts and sequence number for the next check */
