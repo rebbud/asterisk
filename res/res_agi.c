@@ -1159,7 +1159,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     if (cs_pkt_count < os_pkt_count){
         pkt_diff = os_pkt_count - cs_pkt_count - 1;
         
-        if ((pkt_diff > 1) && (pkt_diff < max_pkts)) { // 1 < pkt_diff < 360000 (2 hours) 
+        if ((pkt_diff > 2) && (pkt_diff < max_pkts)) { // 2 < pkt_diff < 360000 (2 hours) 
             last_seq = ast_channel_get_last_seq(chan, stream_no);
             f_no = ast_channel_get_last_ts(chan, stream_no)+f_ptime;
 	    l_no = (pkt_diff*f_ptime)+f_no;
