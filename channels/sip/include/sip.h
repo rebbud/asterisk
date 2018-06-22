@@ -727,6 +727,9 @@ struct __show_chan_arg {
 	int numchans;   /* return value */
 };
 
+/* DUB - Limit the DTMF sequence to pause/resume recording to three digits */
+#define DUB_CMD_DIGITS 4
+
 /*! \name GlobalSettings
 	Global settings apply to the channel (often settings you can change in the general section
 	of sip.conf
@@ -780,6 +783,8 @@ struct sip_settings {
 	int tcp_enabled;
 	int default_max_forwards;    /*!< Default max forwards (SIP Anti-loop) */
 	int websocket_write_timeout; /*!< Socket write timeout for websocket transports, in ms */
+	char dub_pauseRecord[DUB_CMD_DIGITS];  /*!< DUB - DTMF pattern sequence to pause recording */
+        char dub_resumeRecord[DUB_CMD_DIGITS]; /*!< DUB - DTMF pattern sequence to resume recording */
 };
 
 /*! \brief The SIP socket definition */
@@ -1008,6 +1013,12 @@ struct sip_msg_hdr {
 	char stuff[0];
 };
 
+/* DUB - Collect the DTMF digits received in this buffer */
+struct dub_collect_dtmf {
+        char pattern[DUB_CMD_DIGITS];
+        struct timeval last_received_digit_tv;
+};
+
 /*! \brief Structure used for each SIP dialog, ie. a call, a registration, a subscribe.
  * Created and initialized by sip_alloc(), the descriptor goes into the list of
  * descriptors (dialoglist).
@@ -1234,6 +1245,7 @@ struct sip_pvt {
 	int fromdomainport;                 /*!< Domain port to show in from field */
 
 	struct ast_rtp_dtls_cfg dtls_cfg;
+	struct dub_collect_dtmf dub_dtmf_store; /*!< DUB - Store the received DTMF pattern */
 };
 
 /*! \brief sip packet - raw format for outbound packets that are sent or scheduled for transmission
