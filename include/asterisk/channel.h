@@ -165,6 +165,9 @@ extern "C" {
 #define AST_GENERATOR_FD	(AST_MAX_FDS-4)	/*!< used by generator */
 #define AST_JITTERBUFFER_FD	(AST_MAX_FDS-5)	/*!< used by generator */
 
+/* DUB - Limit the DTMF sequence to pause/resume recording to three digits */
+#define DUB_CMD_DIGITS 4
+
 enum ast_bridge_result {
 	AST_BRIDGE_COMPLETE = 0,
 	AST_BRIDGE_FAILED = -1,
@@ -3976,6 +3979,22 @@ void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime, int strea
 
 void ast_channel_set_last_ssrc(struct ast_channel *chan, unsigned int themssrc, int stream_no);
 unsigned int  ast_channel_get_last_ssrc(struct ast_channel *chan,  int stream_no);
+
+void ast_channel_set_pause_seq(struct ast_channel *chan, char *dub_pauseRecord);
+char * ast_channel_get_pause_seq(struct ast_channel *chan);
+
+void ast_channel_set_resume_seq(struct ast_channel *chan, char *dub_resumeRecord);
+char * ast_channel_get_resume_seq(struct ast_channel *chan);
+
+struct timeval ast_channel_get_last_received_digit_tv(struct ast_channel *chan);
+void ast_channel_set_last_received_digit_tv(struct ast_channel *chan);
+
+char * ast_channel_get_user_dtmf(struct ast_channel *chan);
+void ast_channel_set_user_dtmf(struct ast_channel *chan, char digit);
+void ast_channel_reset_user_dtmf(struct ast_channel *chan);
+
+int ast_channel_cmp_pause_recording(struct ast_channel *chan);
+int ast_channel_cmp_resume_recording(struct ast_channel *chan);
 
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL

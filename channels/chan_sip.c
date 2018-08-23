@@ -7184,6 +7184,10 @@ static int sip_answer(struct ast_channel *ast)
 		if (p->stimer->st_active == TRUE) {
 			start_session_timer(p);
 		}
+		
+		/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
+		ast_channel_set_pause_seq(ast, sip_cfg.dub_pauseRecord);
+		ast_channel_set_resume_seq(ast, sip_cfg.dub_resumeRecord);	
 	}
 	sip_pvt_unlock(p);
 	return res;
@@ -21790,21 +21794,21 @@ static void sip_dump_history(struct sip_pvt *dialog)
 /*! DUB: brief  compare the received pattern against the configured one */
 static void dub_channel_cmp_dtmf_pattern(struct sip_pvt *p)
 {
-        ast_debug(5, "DUB: strcmp xpause=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord));
-        ast_debug(5, "DUB: strcmp xresume=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_resumeRecord));
+        ast_debug(1, "DUB: strcmp xpause=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord));
+        ast_debug(1, "DUB: strcmp xresume=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_resumeRecord));
 
         if (!strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord) &&
                 !ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
                 /* DUB - Set flag to pause recording */
                 ast_set_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-                ast_debug(5, "DUB, compare %s and %s, set flag=%d\n", sip_cfg.dub_pauseRecord, p->dub_dtmf_store.pattern,
+                ast_debug(1, "DUB, compare %s and %s, set flag=%d\n", sip_cfg.dub_pauseRecord, p->dub_dtmf_store.pattern,
                                 ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
                 memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS);
         }else if (!strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_resumeRecord) &&
                 ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
                 /* DUB - Clear pause recording flag */
                 ast_clear_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-                ast_debug(5, "DUB, compare %s and %s, cleared flag=%d\n", sip_cfg.dub_resumeRecord, p->dub_dtmf_store.pattern,
+                ast_debug(1, "DUB, compare %s and %s, cleared flag=%d\n", sip_cfg.dub_resumeRecord, p->dub_dtmf_store.pattern,
                                 ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
                 memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS);
         }

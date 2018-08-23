@@ -45,6 +45,12 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 #include "asterisk/channel_internal.h"
 #include "asterisk/test.h"
 
+/* DUB - Collect the DTMF digits received in this buffer */
+struct dub_collect_dtmf {
+        char pattern[DUB_CMD_DIGITS];
+        struct timeval last_received_digit_tv;
+};
+
 /*!
  * \brief Main Channel structure associated with a channel.
  *
@@ -210,6 +216,9 @@ struct ast_channel {
 	struct timeval rec_s2_end_ts;			/*!< DUB - Recording Stream 2 end ts */
 	unsigned int stream1_last_ssrc;			/*!< DUB - Last SSRC for stream 1 */
 	unsigned int stream2_last_ssrc;			/*!< DUB - Last SSRC for stream 2 */
+	char dub_pauseRecord[DUB_CMD_DIGITS];  		/*!< DUB - DTMF pattern sequence to pause recording */
+        char dub_resumeRecord[DUB_CMD_DIGITS]; 		/*!< DUB - DTMF pattern sequence to resume recording */
+	struct dub_collect_dtmf dub_dtmf_store; 	/*!< DUB - Store the received DTMF pattern */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1532,4 +1541,79 @@ unsigned int  ast_channel_get_last_ssrc(struct ast_channel *chan,  int stream_no
                 return chan->stream1_last_ssrc;
         else if (stream_no == 2)
                 return chan->stream2_last_ssrc;
+}
+
+void ast_channel_set_pause_seq(struct ast_channel *chan, char *dub_pauseRecord)
+{
+	int slen = strlen(dub_pauseRecord);
+	if ((slen > 0) && (slen < DUB_CMD_DIGITS)) {
+		strncpy(chan->dub_pauseRecord, dub_pauseRecord, DUB_CMD_DIGITS-1);
+		ast_log(LOG_NOTICE, "Setting pause_record=%s\n", chan->dub_pauseRecord);
+	}
+}
+
+char * ast_channel_get_pause_seq(struct ast_channel *chan)
+{
+	if (chan->dub_pauseRecord)
+		return chan->dub_pauseRecord;
+	else
+		return NULL;
+}
+
+void ast_channel_set_resume_seq(struct ast_channel *chan, char *dub_resumeRecord)
+{
+        int slen = strlen(dub_resumeRecord);
+        if ((slen > 0) && (slen < DUB_CMD_DIGITS)) {
+                strncpy(chan->dub_resumeRecord, dub_resumeRecord, DUB_CMD_DIGITS-1);
+                ast_log(LOG_NOTICE, "Setting resume_record=%s\n", chan->dub_resumeRecord);
+        }
+}
+
+char * ast_channel_get_resume_seq(struct ast_channel *chan)
+{
+        if (chan->dub_resumeRecord)
+                return chan->dub_resumeRecord;
+        else
+                return NULL;
+}
+
+struct timeval ast_channel_get_last_received_digit_tv(struct ast_channel *chan)
+{
+	return chan->dub_dtmf_store.last_received_digit_tv;
+}
+
+void ast_channel_set_last_received_digit_tv(struct ast_channel *chan)
+{
+	chan->dub_dtmf_store.last_received_digit_tv = ast_tvnow();
+}
+
+char * ast_channel_get_user_dtmf(struct ast_channel *chan)
+{
+	return chan->dub_dtmf_store.pattern;
+}
+
+void ast_channel_set_user_dtmf(struct ast_channel *chan, char digit)
+{
+	sprintf(chan->dub_dtmf_store.pattern, "%s%c", chan->dub_dtmf_store.pattern, digit);
+}
+
+void ast_channel_reset_user_dtmf(struct ast_channel *chan)
+{
+	memset(chan->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS);
+}
+
+int ast_channel_cmp_pause_recording(struct ast_channel *chan)
+{
+	if (!strcmp(chan->dub_dtmf_store.pattern, chan->dub_pauseRecord))
+		return 0;
+	else
+		return -1; 
+}
+
+int ast_channel_cmp_resume_recording(struct ast_channel *chan)
+{
+        if (!strcmp(chan->dub_dtmf_store.pattern, chan->dub_resumeRecord))
+                return 0;
+        else
+                return -1;
 }
