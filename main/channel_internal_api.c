@@ -37,6 +37,7 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/time.h>
 
 #include "asterisk/channel.h"
 #include "asterisk/stringfields.h"
@@ -44,6 +45,8 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 #include "asterisk/indications.h"
 #include "asterisk/channel_internal.h"
 #include "asterisk/test.h"
+#include "asterisk/strings.h"
+
 
 /* DUB - Collect the DTMF digits received in this buffer */
 struct dub_collect_dtmf {

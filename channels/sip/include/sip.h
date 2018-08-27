@@ -1013,11 +1013,6 @@ struct sip_msg_hdr {
 	char stuff[0];
 };
 
-/* DUB - Collect the DTMF digits received in this buffer */
-struct dub_collect_dtmf {
-        char pattern[DUB_CMD_DIGITS];
-        struct timeval last_received_digit_tv;
-};
 
 /*! \brief Structure used for each SIP dialog, ie. a call, a registration, a subscribe.
  * Created and initialized by sip_alloc(), the descriptor goes into the list of
@@ -1245,7 +1240,6 @@ struct sip_pvt {
 	int fromdomainport;                 /*!< Domain port to show in from field */
 
 	struct ast_rtp_dtls_cfg dtls_cfg;
-	struct dub_collect_dtmf dub_dtmf_store; /*!< DUB - Store the received DTMF pattern */
 };
 
 /*! \brief sip packet - raw format for outbound packets that are sent or scheduled for transmission

@@ -221,6 +221,7 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 #include "asterisk/paths.h"	/* need ast_config_AST_SYSTEM_NAME */
 #include "asterisk/lock.h"
 #include "asterisk/config.h"
+#include "asterisk/channel.h"
 #include "asterisk/module.h"
 #include "asterisk/pbx.h"
 #include "asterisk/sched.h"
@@ -7184,10 +7185,12 @@ static int sip_answer(struct ast_channel *ast)
 		if (p->stimer->st_active == TRUE) {
 			start_session_timer(p);
 		}
-		
-		/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
-		ast_channel_set_pause_seq(ast, sip_cfg.dub_pauseRecord);
-		ast_channel_set_resume_seq(ast, sip_cfg.dub_resumeRecord);	
+	
+		if (strlen(ast_channel_get_pause_seq(ast)) == 0) {	
+			/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
+			ast_channel_set_pause_seq(ast, sip_cfg.dub_pauseRecord);
+			ast_channel_set_resume_seq(ast, sip_cfg.dub_resumeRecord);
+		}
 	}
 	sip_pvt_unlock(p);
 	return res;
@@ -21790,60 +21793,6 @@ static void sip_dump_history(struct sip_pvt *dialog)
 	ast_debug(1, "\n---------- END SIP HISTORY for '%s' \n", dialog->callid);
 }
 
-
-/*! DUB: brief  compare the received pattern against the configured one */
-static void dub_channel_cmp_dtmf_pattern(struct sip_pvt *p)
-{
-        ast_debug(1, "DUB: strcmp xpause=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord));
-        ast_debug(1, "DUB: strcmp xresume=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_resumeRecord));
-
-        if (!strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord) &&
-                !ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-                /* DUB - Set flag to pause recording */
-                ast_set_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-                ast_debug(1, "DUB, compare %s and %s, set flag=%d\n", sip_cfg.dub_pauseRecord, p->dub_dtmf_store.pattern,
-                                ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
-                memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS);
-        }else if (!strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_resumeRecord) &&
-                ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-                /* DUB - Clear pause recording flag */
-                ast_clear_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-                ast_debug(1, "DUB, compare %s and %s, cleared flag=%d\n", sip_cfg.dub_resumeRecord, p->dub_dtmf_store.pattern,
-                                ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
-                memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS);
-        }
-
-        return;
-}
-
-/*! DUB: brief  build a pattern of DTMF digits - Maximum 3 */
-static void dub_channel_build_dtmf_pattern(struct sip_pvt *p, const char digit)
-{
-        /* Append the last received digit and check the stored timestamp.
-         * if current time - stored > 3s, discard existing store and build fresh.
-         * also clear the store when number of collected digits reaches maximum length.
-         */
-        int duration = 0;
-
-        if (!strlen(sip_cfg.dub_pauseRecord) || !strlen(sip_cfg.dub_resumeRecord)) {
-                ast_log(LOG_WARNING, "pause_record/resume_record pattern not configured in sip.conf\n");
-                return;
-        }
-
-        duration = ast_tvdiff_sec(ast_tvnow(), p->dub_dtmf_store.last_received_digit_tv);
-        if ((duration > 3) ||
-                (strlen(p->dub_dtmf_store.pattern)+1 == DUB_CMD_DIGITS)) {
-                /* clear existing pattern */
-                memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS);
-        }
-        sprintf(p->dub_dtmf_store.pattern, "%s%c", p->dub_dtmf_store.pattern, digit);
-        p->dub_dtmf_store.last_received_digit_tv = ast_tvnow();
-
-        dub_channel_cmp_dtmf_pattern(p);
-
-        return;
-}
-
 /*! \brief  Receive SIP INFO Message */
 static void handle_request_info(struct sip_pvt *p, struct sip_request *req)
 {
@@ -21935,7 +21884,7 @@ static void handle_request_info(struct sip_pvt *p, struct sip_request *req)
 				ast_verbose("* DTMF-relay event received: %c\n", (int) f.subclass.integer);
 			}
 		}
-		dub_channel_build_dtmf_pattern(p, buf[0]); // DUB
+
 		transmit_response(p, "200 OK", req);
 		return;
 	} else if (!strcasecmp(c, "application/media_control+xml")) {

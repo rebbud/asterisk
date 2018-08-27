@@ -1030,13 +1030,13 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 static void dub_channel_cmp_dtmf_pattern(struct ast_channel *chan)
 {
         if (!ast_channel_cmp_pause_recording(chan) && !ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-                ast_set_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING); /* DUB - Set flag to pause recording */
+                ast_set_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING); // DUB - Set flag to pause recording 
                 ast_log(LOG_NOTICE, "DUB, compare %s and %s, set flag=%d\n", ast_channel_get_pause_seq(chan), 
 								      ast_channel_get_user_dtmf(chan), 
 								      ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
                 ast_channel_reset_user_dtmf(chan);
         }else if (!ast_channel_cmp_resume_recording(chan)  && ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-                ast_clear_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING); /* DUB - Clear pause recording flag */
+                ast_clear_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING); // DUB - Clear pause recording flag 
                 ast_log(LOG_NOTICE, "DUB, compare %s and %s, cleared flag=%d\n", ast_channel_get_resume_seq(chan), 
 									  ast_channel_get_user_dtmf(chan), 
 									  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
@@ -1049,10 +1049,10 @@ static void dub_channel_cmp_dtmf_pattern(struct ast_channel *chan)
 /*! DUB - brief  build a pattern of DTMF digits - Maximum 3 */
 static void dub_channel_build_dtmf_pattern(struct ast_channel *chan, char digit)
 {
-        /* Append the last received digit and check the stored timestamp.
-         * if current time - stored > 3s, discard existing store and build fresh.
-         * also clear the store when number of collected digits reaches maximum length.
-         */
+        // Append the last received digit and check the stored timestamp.
+        // if current time - stored > 3s, discard existing store and build fresh.
+        // also clear the store when number of collected digits reaches maximum length.
+        
         int duration = 0;
 	char *pause = ast_channel_get_pause_seq(chan);
 	char *resume = ast_channel_get_resume_seq(chan);
@@ -1070,7 +1070,7 @@ static void dub_channel_build_dtmf_pattern(struct ast_channel *chan, char digit)
         duration = ast_tvdiff_sec(ast_tvnow(), ast_channel_get_last_received_digit_tv(chan));
 
         if ((duration > 3) || (strlen(ast_channel_get_user_dtmf(chan))+1 == DUB_CMD_DIGITS)) {
-		ast_channel_reset_user_dtmf(chan); /* clear existing pattern */
+		ast_channel_reset_user_dtmf(chan); // clear existing pattern 
         }
 	
 	ast_channel_set_user_dtmf(chan, digit);
@@ -1079,7 +1079,7 @@ static void dub_channel_build_dtmf_pattern(struct ast_channel *chan, char digit)
         dub_channel_cmp_dtmf_pattern(chan);
 
         return;
-}
+} 
 
 /*! DUB - Insert Silence to the Recording file */
 static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no, long int ts_start, long int f_ptime, long int gap_ms, unsigned int themssrc)
@@ -2661,7 +2661,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			}
 			switch(f->frametype) {
 			case AST_FRAME_DTMF:
-				ast_debug(5, "DUB: no processing for DTMF digit=%d, flag=%d \n", f->subclass.integer,
+				ast_debug(5, "DUB: Processing DTMF digit=%c, flag=%d \n", f->subclass.integer,
                                         ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
 
 				dub_channel_build_dtmf_pattern(chan, f->subclass.integer);
