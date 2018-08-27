@@ -1029,22 +1029,22 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 /*! DUB - Compare the received pattern against the configured one */
 static void dub_channel_cmp_dtmf_pattern(struct ast_channel *chan)
 {
-        if (!ast_channel_cmp_pause_recording(chan) && 
+	if (!ast_channel_cmp_pause_recording(chan) && 
 	    !ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-		// DUB - Set flag to pause recording
-                ast_set_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-                ast_log(LOG_NOTICE, "DUB, compare %s and %s, set flag=%d\n", ast_channel_get_pause_seq(chan), 
+		/* DUB - Set flag to pause recording */
+		ast_set_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
+		ast_log(LOG_NOTICE, "DUB, compare %s and %s, set flag=%d\n", ast_channel_get_pause_seq(chan), 
 								      ast_channel_get_user_dtmf(chan), 
 								      ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
                 ast_channel_reset_user_dtmf(chan);
-        }else if (!ast_channel_cmp_resume_recording(chan)  && 
-		  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-		// DUB - Clear pause recording flag
-                ast_clear_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-                ast_log(LOG_NOTICE, "DUB, compare %s and %s, cleared flag=%d\n", ast_channel_get_resume_seq(chan), 
-									  ast_channel_get_user_dtmf(chan), 
-									  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
-                ast_channel_reset_user_dtmf(chan);
+	}else if (!ast_channel_cmp_resume_recording(chan)  && 
+		ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+		/* DUB - Clear pause recording flag */
+		ast_clear_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
+		ast_log(LOG_NOTICE, "DUB, compare %s and %s, cleared flag=%d\n", ast_channel_get_resume_seq(chan), 
+									ast_channel_get_user_dtmf(chan), 
+									ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+	ast_channel_reset_user_dtmf(chan);
         }
 
         return;
@@ -1053,11 +1053,11 @@ static void dub_channel_cmp_dtmf_pattern(struct ast_channel *chan)
 /*! DUB - brief  build a pattern of DTMF digits - Maximum 3 */
 static void dub_channel_build_dtmf_pattern(struct ast_channel *chan, char digit)
 {
-        // Append the last received digit and check the stored timestamp.
-        // if current time - stored > 3s, discard existing store and build fresh.
-        // also clear the store when number of collected digits reaches maximum length.
+        /* Append the last received digit and check the stored timestamp.
+	if current time - stored > 3s, discard existing store and build fresh.
+	also clear the store when number of collected digits reaches maximum length. */
         
-        int duration = 0;
+	int duration = 0;
 	char *pause = ast_channel_get_pause_seq(chan);
 	char *resume = ast_channel_get_resume_seq(chan);
 
@@ -1071,17 +1071,15 @@ static void dub_channel_build_dtmf_pattern(struct ast_channel *chan, char digit)
 		return;
 	}
 
-        duration = ast_tvdiff_sec(ast_tvnow(), ast_channel_get_last_received_digit_tv(chan));
+	duration = ast_tvdiff_sec(ast_tvnow(), ast_channel_get_last_received_digit_tv(chan));
 
-        if ((duration > 3) || (strlen(ast_channel_get_user_dtmf(chan))+1 == DUB_CMD_DIGITS)) {
+	if ((duration > 3) || (strlen(ast_channel_get_user_dtmf(chan))+1 == DUB_CMD_DIGITS)) {
 		ast_channel_reset_user_dtmf(chan); // clear existing pattern 
-        }
+	}
 	
 	ast_channel_set_user_dtmf(chan, digit);
 	ast_channel_set_last_received_digit_tv(chan);
-
-        dub_channel_cmp_dtmf_pattern(chan);
-
+	dub_channel_cmp_dtmf_pattern(chan);
         return;
 } 
 
