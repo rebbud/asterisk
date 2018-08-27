@@ -221,7 +221,6 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 #include "asterisk/paths.h"	/* need ast_config_AST_SYSTEM_NAME */
 #include "asterisk/lock.h"
 #include "asterisk/config.h"
-#include "asterisk/channel.h"
 #include "asterisk/module.h"
 #include "asterisk/pbx.h"
 #include "asterisk/sched.h"
@@ -21884,7 +21883,6 @@ static void handle_request_info(struct sip_pvt *p, struct sip_request *req)
 				ast_verbose("* DTMF-relay event received: %c\n", (int) f.subclass.integer);
 			}
 		}
-
 		transmit_response(p, "200 OK", req);
 		return;
 	} else if (!strcasecmp(c, "application/media_control+xml")) {

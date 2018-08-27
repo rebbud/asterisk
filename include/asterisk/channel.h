@@ -907,9 +907,8 @@ enum {
 	/*!
 	 * The data on chan->timingdata is an astobj2 object.
 	 */
-	AST_FLAG_TIMINGDATA_IS_AO2_OBJ = (1 << 23),
-	
-	AST_FLAG_DUB_PAUSE_RESUME_RECORDING = (1 << 24),
+	AST_FLAG_TIMINGDATA_IS_AO2_OBJ = (1 << 23),	
+	AST_FLAG_DUB_PAUSE_RESUME_RECORDING = (1 << 24), //DUB - Flag for pause / resume
 };
 
 /*! \brief ast_bridge_config flags */

@@ -784,7 +784,7 @@ struct sip_settings {
 	int default_max_forwards;    /*!< Default max forwards (SIP Anti-loop) */
 	int websocket_write_timeout; /*!< Socket write timeout for websocket transports, in ms */
 	char dub_pauseRecord[DUB_CMD_DIGITS];  /*!< DUB - DTMF pattern sequence to pause recording */
-        char dub_resumeRecord[DUB_CMD_DIGITS]; /*!< DUB - DTMF pattern sequence to resume recording */
+	char dub_resumeRecord[DUB_CMD_DIGITS]; /*!< DUB - DTMF pattern sequence to resume recording */
 };
 
 /*! \brief The SIP socket definition */
@@ -1012,7 +1012,6 @@ struct sip_msg_hdr {
 	/*! The name and value strings are stuffed here in that order. */
 	char stuff[0];
 };
-
 
 /*! \brief Structure used for each SIP dialog, ie. a call, a registration, a subscribe.
  * Created and initialized by sip_alloc(), the descriptor goes into the list of

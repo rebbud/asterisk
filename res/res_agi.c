@@ -1029,14 +1029,18 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 /*! DUB - Compare the received pattern against the configured one */
 static void dub_channel_cmp_dtmf_pattern(struct ast_channel *chan)
 {
-        if (!ast_channel_cmp_pause_recording(chan) && !ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-                ast_set_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING); // DUB - Set flag to pause recording 
+        if (!ast_channel_cmp_pause_recording(chan) && 
+	    !ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+		// DUB - Set flag to pause recording
+                ast_set_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
                 ast_log(LOG_NOTICE, "DUB, compare %s and %s, set flag=%d\n", ast_channel_get_pause_seq(chan), 
 								      ast_channel_get_user_dtmf(chan), 
 								      ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
                 ast_channel_reset_user_dtmf(chan);
-        }else if (!ast_channel_cmp_resume_recording(chan)  && ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-                ast_clear_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING); // DUB - Clear pause recording flag 
+        }else if (!ast_channel_cmp_resume_recording(chan)  && 
+		  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+		// DUB - Clear pause recording flag
+                ast_clear_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
                 ast_log(LOG_NOTICE, "DUB, compare %s and %s, cleared flag=%d\n", ast_channel_get_resume_seq(chan), 
 									  ast_channel_get_user_dtmf(chan), 
 									  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));

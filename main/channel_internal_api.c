@@ -37,7 +37,6 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/time.h>
 
 #include "asterisk/channel.h"
 #include "asterisk/stringfields.h"
@@ -45,8 +44,6 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 #include "asterisk/indications.h"
 #include "asterisk/channel_internal.h"
 #include "asterisk/test.h"
-#include "asterisk/strings.h"
-
 
 /* DUB - Collect the DTMF digits received in this buffer */
 struct dub_collect_dtmf {
@@ -220,7 +217,7 @@ struct ast_channel {
 	unsigned int stream1_last_ssrc;			/*!< DUB - Last SSRC for stream 1 */
 	unsigned int stream2_last_ssrc;			/*!< DUB - Last SSRC for stream 2 */
 	char dub_pauseRecord[DUB_CMD_DIGITS];  		/*!< DUB - DTMF pattern sequence to pause recording */
-        char dub_resumeRecord[DUB_CMD_DIGITS]; 		/*!< DUB - DTMF pattern sequence to resume recording */
+	char dub_resumeRecord[DUB_CMD_DIGITS]; 		/*!< DUB - DTMF pattern sequence to resume recording */
 	struct dub_collect_dtmf dub_dtmf_store; 	/*!< DUB - Store the received DTMF pattern */
 };
 
