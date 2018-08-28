@@ -218,7 +218,8 @@ struct ast_channel {
 	unsigned int stream2_last_ssrc;			/*!< DUB - Last SSRC for stream 2 */
 	char dub_pauseRecord[DUB_CMD_DIGITS];  		/*!< DUB - DTMF pattern sequence to pause recording */
 	char dub_resumeRecord[DUB_CMD_DIGITS]; 		/*!< DUB - DTMF pattern sequence to resume recording */
-	struct dub_collect_dtmf dub_dtmf_store; 	/*!< DUB - Store the received DTMF pattern */
+	struct dub_collect_dtmf dub_dtmf_store1; 	/*!< DUB - Store the received DTMF pattern of Stream1 */
+	struct dub_collect_dtmf dub_dtmf_store2; 	/*!< DUB - Store the received DTMF pattern of Stream2 */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1543,6 +1544,7 @@ unsigned int  ast_channel_get_last_ssrc(struct ast_channel *chan,  int stream_no
                 return chan->stream2_last_ssrc;
 }
 
+/*! Set and get the pause and resume DTMF pattern */
 void ast_channel_set_pause_seq(struct ast_channel *chan, char *dub_pauseRecord)
 {
 	int slen = strlen(dub_pauseRecord);
@@ -1577,43 +1579,63 @@ char * ast_channel_get_resume_seq(struct ast_channel *chan)
                 return NULL;
 }
 
-struct timeval ast_channel_get_last_received_digit_tv(struct ast_channel *chan)
+/*! Set & get the timestamp of the last received dtmf */
+struct timeval ast_channel_get_last_received_digit_tv(struct ast_channel *chan, int stream)
 {
-	return chan->dub_dtmf_store.last_received_digit_tv;
-}
-
-void ast_channel_set_last_received_digit_tv(struct ast_channel *chan)
-{
-	chan->dub_dtmf_store.last_received_digit_tv = ast_tvnow();
-}
-
-char * ast_channel_get_user_dtmf(struct ast_channel *chan)
-{
-	return chan->dub_dtmf_store.pattern;
-}
-
-void ast_channel_set_user_dtmf(struct ast_channel *chan, char digit)
-{
-	sprintf(chan->dub_dtmf_store.pattern, "%s%c", chan->dub_dtmf_store.pattern, digit);
-}
-
-void ast_channel_reset_user_dtmf(struct ast_channel *chan)
-{
-	memset(chan->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS);
-}
-
-int ast_channel_cmp_pause_recording(struct ast_channel *chan)
-{
-	if (!strcmp(chan->dub_dtmf_store.pattern, chan->dub_pauseRecord))
-		return 0;
+	if (stream == 1)
+		return chan->dub_dtmf_store1.last_received_digit_tv;
 	else
-		return -1; 
+		return chan->dub_dtmf_store2.last_received_digit_tv;
 }
 
-int ast_channel_cmp_resume_recording(struct ast_channel *chan)
+void ast_channel_set_last_received_digit_tv(struct ast_channel *chan, int stream)
 {
-        if (!strcmp(chan->dub_dtmf_store.pattern, chan->dub_resumeRecord))
+	if (stream == 1)
+		chan->dub_dtmf_store1.last_received_digit_tv = ast_tvnow();
+	else
+		chan->dub_dtmf_store2.last_received_digit_tv = ast_tvnow();
+}
+
+char * ast_channel_get_user_dtmf(struct ast_channel *chan, int stream)
+{
+	if (stream == 1)
+		return chan->dub_dtmf_store1.pattern;
+	else
+		return chan->dub_dtmf_store2.pattern;
+}
+
+void ast_channel_set_user_dtmf(struct ast_channel *chan, int stream, char digit)
+{
+	if (stream == 1)
+		sprintf(chan->dub_dtmf_store1.pattern, "%s%c", chan->dub_dtmf_store1.pattern, digit);
+	else
+		sprintf(chan->dub_dtmf_store2.pattern, "%s%c", chan->dub_dtmf_store2.pattern, digit);
+}
+
+void ast_channel_reset_user_dtmf(struct ast_channel *chan, int stream)
+{
+	if (stream == 1)
+		memset(chan->dub_dtmf_store1.pattern, 0, DUB_CMD_DIGITS);
+	else
+		memset(chan->dub_dtmf_store2.pattern, 0, DUB_CMD_DIGITS);
+}
+
+int ast_channel_cmp_pause_recording(struct ast_channel *chan, int stream)
+{
+	if ((stream == 1) && !strcmp(chan->dub_dtmf_store1.pattern, chan->dub_pauseRecord))
+		return 0;
+	else if ((stream == 2) && !strcmp(chan->dub_dtmf_store2.pattern, chan->dub_pauseRecord)) 
+		return 0;
+
+	return -1; 
+}
+
+int ast_channel_cmp_resume_recording(struct ast_channel *chan, int stream)
+{
+        if ((stream == 1) && !strcmp(chan->dub_dtmf_store1.pattern, chan->dub_resumeRecord))
                 return 0;
-        else
-                return -1;
+        else if ((stream == 2) && !strcmp(chan->dub_dtmf_store2.pattern, chan->dub_resumeRecord))
+		return 0;
+
+	return -1;
 }

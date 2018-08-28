@@ -3985,15 +3985,15 @@ char * ast_channel_get_pause_seq(struct ast_channel *chan);
 void ast_channel_set_resume_seq(struct ast_channel *chan, char *dub_resumeRecord);
 char * ast_channel_get_resume_seq(struct ast_channel *chan);
 
-struct timeval ast_channel_get_last_received_digit_tv(struct ast_channel *chan);
-void ast_channel_set_last_received_digit_tv(struct ast_channel *chan);
+struct timeval ast_channel_get_last_received_digit_tv(struct ast_channel *chan, int stream);
+void ast_channel_set_last_received_digit_tv(struct ast_channel *chan, int stream);
 
-char * ast_channel_get_user_dtmf(struct ast_channel *chan);
-void ast_channel_set_user_dtmf(struct ast_channel *chan, char digit);
-void ast_channel_reset_user_dtmf(struct ast_channel *chan);
+char * ast_channel_get_user_dtmf(struct ast_channel *chan, int stream);
+void ast_channel_set_user_dtmf(struct ast_channel *chan, int stream, char digit);
+void ast_channel_reset_user_dtmf(struct ast_channel *chan, int stream);
 
-int ast_channel_cmp_pause_recording(struct ast_channel *chan);
-int ast_channel_cmp_resume_recording(struct ast_channel *chan);
+int ast_channel_cmp_pause_recording(struct ast_channel *chan, int stream);
+int ast_channel_cmp_resume_recording(struct ast_channel *chan, int stream);
 
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL
