@@ -7184,12 +7184,6 @@ static int sip_answer(struct ast_channel *ast)
 		if (p->stimer->st_active == TRUE) {
 			start_session_timer(p);
 		}
-	
-		if (strlen(ast_channel_get_pause_seq(ast)) == 0) {	
-			/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
-			ast_channel_set_pause_seq(ast, sip_cfg.dub_pauseRecord);
-			ast_channel_set_resume_seq(ast, sip_cfg.dub_resumeRecord);
-		}
 	}
 	sip_pvt_unlock(p);
 	return res;
@@ -26235,6 +26229,12 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 				ast_channel_set_redirecting(c, &redirecting, &update_redirecting);
 				ast_party_redirecting_free(&redirecting);
 			}
+
+			 if (c) {
+                         	/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
+                         	ast_channel_set_pause_seq(c, sip_cfg.dub_pauseRecord);
+                         	ast_channel_set_resume_seq(c, sip_cfg.dub_resumeRecord);
+                 	}
 		}
 	} else {
 		ast_party_redirecting_init(&redirecting);

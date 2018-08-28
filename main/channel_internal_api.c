@@ -1622,20 +1622,25 @@ void ast_channel_reset_user_dtmf(struct ast_channel *chan, int stream)
 
 int ast_channel_cmp_pause_recording(struct ast_channel *chan, int stream)
 {
-	if ((stream == 1) && !strcmp(chan->dub_dtmf_store1.pattern, chan->dub_pauseRecord))
-		return 0;
-	else if ((stream == 2) && !strcmp(chan->dub_dtmf_store2.pattern, chan->dub_pauseRecord)) 
-		return 0;
+        if ((stream == 1) && !strcmp(chan->dub_dtmf_store1.pattern, chan->dub_pauseRecord)){
+                ast_log(LOG_NOTICE, "Stream1: (Pause) Is %s === %s\n", chan->dub_dtmf_store1.pattern, chan->dub_pauseRecord);
+                return 0;
+        } else if ((stream == 2) && !strcmp(chan->dub_dtmf_store2.pattern, chan->dub_pauseRecord)){
+                ast_log(LOG_NOTICE, "Stream2: (Pause) Is %s === %s\n", chan->dub_dtmf_store2.pattern, chan->dub_pauseRecord);
+                return 0;
+        }
 
-	return -1; 
+        return -1; 
 }
 
 int ast_channel_cmp_resume_recording(struct ast_channel *chan, int stream)
 {
-        if ((stream == 1) && !strcmp(chan->dub_dtmf_store1.pattern, chan->dub_resumeRecord))
+        if ((stream == 1) && !strcmp(chan->dub_dtmf_store1.pattern, chan->dub_resumeRecord)){
+                ast_log(LOG_NOTICE, "Stream1: (Resume) Is %s === %s\n", chan->dub_dtmf_store1.pattern, chan->dub_resumeRecord);
                 return 0;
-        else if ((stream == 2) && !strcmp(chan->dub_dtmf_store2.pattern, chan->dub_resumeRecord))
-		return 0;
-
-	return -1;
+        } else if ((stream == 2) && !strcmp(chan->dub_dtmf_store2.pattern, chan->dub_resumeRecord)){
+                ast_log(LOG_NOTICE, "Stream2: (Resume) Is %s === %s\n", chan->dub_dtmf_store2.pattern, chan->dub_resumeRecord);
+                return 0;
+        }
+        return -1;
 }
