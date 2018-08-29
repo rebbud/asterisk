@@ -166,7 +166,7 @@ int daemon(int, int);  /* defined in libresolv of all places */
 #define NUM_MSGS 64
 
 /*! Default minimum DTMF digit length - 80ms */
-#define AST_MIN_DTMF_DURATION 80
+#define AST_MIN_DTMF_DURATION 40
 
 
 /*! \brief Welcome message when starting a CLI interface */

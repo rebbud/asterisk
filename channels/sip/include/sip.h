@@ -727,6 +727,9 @@ struct __show_chan_arg {
 	int numchans;   /* return value */
 };
 
+/* DUB - Limit the DTMF sequence to pause/resume recording to three digits */
+#define DUB_CMD_DIGITS 4
+
 /*! \name GlobalSettings
 	Global settings apply to the channel (often settings you can change in the general section
 	of sip.conf
@@ -780,6 +783,8 @@ struct sip_settings {
 	int tcp_enabled;
 	int default_max_forwards;    /*!< Default max forwards (SIP Anti-loop) */
 	int websocket_write_timeout; /*!< Socket write timeout for websocket transports, in ms */
+	char dub_pauseRecord[DUB_CMD_DIGITS];  /*!< DUB - DTMF pattern sequence to pause recording */
+	char dub_resumeRecord[DUB_CMD_DIGITS]; /*!< DUB - DTMF pattern sequence to resume recording */
 };
 
 /*! \brief The SIP socket definition */

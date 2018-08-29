@@ -21192,6 +21192,8 @@ static char *sip_show_settings(struct ast_cli_entry *e, int cmd, struct ast_cli_
  	ast_cli(a->fd, "  Timer B:                %d\n", global_timer_b);
 	ast_cli(a->fd, "  No premature media:     %s\n", AST_CLI_YESNO(global_prematuremediafilter));
 	ast_cli(a->fd, "  Max forwards:           %d\n", sip_cfg.default_max_forwards);
+	ast_cli(a->fd, "  Pause record:           %s\n", sip_cfg.dub_pauseRecord); //DUB: Recording Pause sequence 
+	ast_cli(a->fd, "  Resume record:          %s\n", sip_cfg.dub_resumeRecord);//DUB: Recording Resume sequence
 
 	ast_cli(a->fd, "\nDefault Settings:\n");
 	ast_cli(a->fd, "-----------------\n");
@@ -21783,7 +21785,6 @@ static void sip_dump_history(struct sip_pvt *dialog)
 	}
 	ast_debug(1, "\n---------- END SIP HISTORY for '%s' \n", dialog->callid);
 }
-
 
 /*! \brief  Receive SIP INFO Message */
 static void handle_request_info(struct sip_pvt *p, struct sip_request *req)
@@ -26228,6 +26229,12 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 				ast_channel_set_redirecting(c, &redirecting, &update_redirecting);
 				ast_party_redirecting_free(&redirecting);
 			}
+
+			 if (c) {
+                         	/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
+                         	ast_channel_set_pause_seq(c, sip_cfg.dub_pauseRecord);
+                         	ast_channel_set_resume_seq(c, sip_cfg.dub_resumeRecord);
+                 	}
 		}
 	} else {
 		ast_party_redirecting_init(&redirecting);
@@ -32112,6 +32119,8 @@ static int reload_config(enum channelreloadreason reason)
 	ast_copy_string(sip_cfg.default_record_off_feature, DEFAULT_RECORD_FEATURE, sizeof(sip_cfg.default_record_off_feature));
 	sip_cfg.default_subscribecontext[0] = '\0';
 	sip_cfg.default_max_forwards = DEFAULT_MAX_FORWARDS;
+	memset(sip_cfg.dub_pauseRecord, 0, DUB_CMD_DIGITS);
+	memset(sip_cfg.dub_resumeRecord, 0, DUB_CMD_DIGITS);
 	default_language[0] = '\0';
 	default_fromdomain[0] = '\0';
 	default_fromdomainport = 0;
@@ -32713,7 +32722,27 @@ static int reload_config(enum channelreloadreason reason)
 				ast_log(LOG_WARNING, "'%s' is not a valid websocket_write_timeout value at line %d. Using default '%d'.\n", v->value, v->lineno, AST_DEFAULT_WEBSOCKET_WRITE_TIMEOUT);
 				sip_cfg.websocket_write_timeout = AST_DEFAULT_WEBSOCKET_WRITE_TIMEOUT;
 			}
-		}
+		} else if (!strcasecmp(v->name, "pause_record")) {
+                        int slen = strlen(v->value);
+                        if (slen) {
+                                if (slen < DUB_CMD_DIGITS) {
+                                        strncpy(sip_cfg.dub_pauseRecord, v->value, DUB_CMD_DIGITS-1);
+                                        ast_debug(5, "Setting pause_record=%s\n", sip_cfg.dub_pauseRecord);
+                                } else {
+                                        ast_log(LOG_WARNING, "pause_record=%s exceeds maximum digits(%d)\n", v->value, DUB_CMD_DIGITS-1);
+                                }
+                        }
+                } else if (!strcasecmp(v->name, "resume_record")) {
+                        int slen = strlen(v->value);
+                        if (slen) {
+                                if (slen < DUB_CMD_DIGITS) {
+                                        strncpy(sip_cfg.dub_resumeRecord, v->value, DUB_CMD_DIGITS-1);
+                                        ast_debug(5, "Setting resume_record=%s\n", sip_cfg.dub_resumeRecord);
+                                } else {
+                                        ast_log(LOG_WARNING, "resume_record=%s exceeds maximum digits(%d)\n", v->value, DUB_CMD_DIGITS-1);
+                                }
+                        }
+                }
 	}
 
 	/* Override global defaults if setting found in general section */
