@@ -26231,9 +26231,17 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 			}
 
 			 if (c) {
+				int ret_val;
+				char val[20]="\0";
+				size_t val_len=20;
                          	/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
                          	ast_channel_set_pause_seq(c, sip_cfg.dub_pauseRecord);
                          	ast_channel_set_resume_seq(c, sip_cfg.dub_resumeRecord);
+
+				ret_val=func_header_read(c, "SIP_HEADER", "X-Dubber-Call-Control", &val[0], val_len);
+				if(ret_val ==0){
+					ast_log(LOG_NOTICE, "LABEL IS %s", val);
+				}
                  	}
 		}
 	} else {
