@@ -220,6 +220,7 @@ struct ast_channel {
 	char dub_resumeRecord[DUB_CMD_DIGITS]; 		/*!< DUB - DTMF pattern sequence to resume recording */
 	struct dub_collect_dtmf dub_dtmf_store1; 	/*!< DUB - Store the received DTMF pattern of Stream1 */
 	struct dub_collect_dtmf dub_dtmf_store2; 	/*!< DUB - Store the received DTMF pattern of Stream2 */
+	long int  stream_label; 			/*!< DUB - Stream label */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1550,7 +1551,7 @@ void ast_channel_set_pause_seq(struct ast_channel *chan, char *dub_pauseRecord)
 	int slen = strlen(dub_pauseRecord);
 	if ((slen > 0) && (slen < DUB_CMD_DIGITS)) {
 		strncpy(chan->dub_pauseRecord, dub_pauseRecord, DUB_CMD_DIGITS-1);
-		ast_log(LOG_NOTICE, "Setting pause_record=%s\n", chan->dub_pauseRecord);
+		ast_log(LOG_NOTICE, "Pause Recording DTMF Sequence = %s\n", chan->dub_pauseRecord);
 	}
 }
 
@@ -1567,7 +1568,7 @@ void ast_channel_set_resume_seq(struct ast_channel *chan, char *dub_resumeRecord
         int slen = strlen(dub_resumeRecord);
         if ((slen > 0) && (slen < DUB_CMD_DIGITS)) {
                 strncpy(chan->dub_resumeRecord, dub_resumeRecord, DUB_CMD_DIGITS-1);
-                ast_log(LOG_NOTICE, "Setting resume_record=%s\n", chan->dub_resumeRecord);
+                ast_log(LOG_NOTICE, "Resume Recording DTMF Sequence = %s\n", chan->dub_resumeRecord);
         }
 }
 
@@ -1643,4 +1644,14 @@ int ast_channel_cmp_resume_recording(struct ast_channel *chan, int stream)
                 return 0;
         }
         return -1;
+}
+
+void ast_channel_set_stream_label(struct ast_channel *chan, char *label)
+{
+	chan->stream_label = atol(label);
+}
+
+long int ast_channel_get_stream_label(struct ast_channel *chan)
+{
+	return chan->stream_label;
 }

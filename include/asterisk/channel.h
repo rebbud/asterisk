@@ -3995,6 +3995,9 @@ void ast_channel_reset_user_dtmf(struct ast_channel *chan, int stream);
 int ast_channel_cmp_pause_recording(struct ast_channel *chan, int stream);
 int ast_channel_cmp_resume_recording(struct ast_channel *chan, int stream);
 
+void ast_channel_set_stream_label(struct ast_channel *chan, char *label);
+long int ast_channel_get_stream_label(struct ast_channel *chan);
+
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL
 struct ast_epoll_data *ast_channel_internal_epfd_data(const struct ast_channel *chan, int which);
