@@ -1379,6 +1379,7 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 static int process_sdp_o(const char *o, struct sip_pvt *p);
 static int process_sdp_c(const char *c, struct ast_sockaddr *addr);
 static int process_sdp_a_sendonly(const char *a, int *sendonly);
+static int process_sdp_a_label(const char *a, struct sip_pvt *p, int stream_no);
 static int process_sdp_a_ice(const char *a, struct sip_pvt *p, struct ast_rtp_instance *instance);
 static int process_sdp_a_dtls(const char *a, struct sip_pvt *p, struct ast_rtp_instance *instance);
 static int process_sdp_a_audio(const char *a, struct sip_pvt *p, struct ast_rtp_codecs *newaudiortp, int *last_rtpmap_codec);
@@ -8241,7 +8242,9 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		if (f && (f->frametype == AST_FRAME_VOICE)) { /* RTP Audio */
 			/* Add flag to distinguish the stream */
 			ast_set_flag(f, AST_FRFLAG_STREAM1);
-			ast_debug(3, "read stream1\n");
+			//f->stream_label = ast_rtp_instance_get_stream_label(p->rtp);
+			//ast_log(LOG_NOTICE, "f->stream_label = %ld\n", f->stream_label);
+			ast_log(LOG_NOTICE, "f->stream_label = %ld\n", ast_rtp_instance_get_stream_label(p->rtp));
 		}
 		break;
 	case 6:
@@ -8249,7 +8252,9 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		f = ast_rtp_instance_read(p->rtp2, 0);	
 		if (f && (f->frametype == AST_FRAME_VOICE)) { 
 			ast_set_flag(f, AST_FRFLAG_STREAM2);
-			ast_debug(3, "read stream2\n");
+			//f->stream_label = ast_rtp_instance_get_stream_label(p->rtp2);
+			//ast_log(LOG_NOTICE, "f->stream_label = %ld\n", f->stream_label);
+			ast_log(LOG_NOTICE, "f->stream_label = %ld\n", ast_rtp_instance_get_stream_label(p->rtp2));
 		}
 		break;
 	case 1:
@@ -9911,7 +9916,8 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 		res = -1;
 		goto process_sdp_cleanup;
 	}
-/* Shoud we go to process_sdp_cleanup if !p->rtp2 */
+
+	/* Shoud we go to process_sdp_cleanup if !p->rtp2 */
         if (!p->rtp2) {
                 res = -1;
                 goto process_sdp_cleanup;
@@ -10429,7 +10435,12 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 						processed = TRUE;
 					} else if (process_sdp_a_audio(value, p, &newaudiortp[maudioLines], &last_rtpmap_codec)) {
 						processed = TRUE;
+					} else if (process_sdp_a_label(value, p, maudioLines)) { /*! DUB - Process the label attribute */
+						processed = TRUE;
 					}
+
+					ast_log(LOG_NOTICE, "Processing media-level (%s) SDP %c=%s... %s\n",
+                                  			"audio", type, value, (processed == TRUE)? "OK." : "UNSUPPORTED OR FAILED.");
 				}
 				/* Video specific scanning */
 				else if (video) {
@@ -11047,6 +11058,27 @@ static int process_sdp_a_sendonly(const char *a, int *sendonly)
 			*sendonly = 0;
 		found = TRUE;
 	}
+	return found;
+}
+
+/*! DUB - Process the label attribute */
+static int process_sdp_a_label(const char *a, struct sip_pvt *p, int stream_no)
+{
+	int found = FALSE;
+	char *a_string = strdup(a);
+
+	if (strstr(a_string, "label") != NULL){
+		char *s_label = strtok(a_string, ":");
+		char *s_value = strtok(NULL, ":");
+
+		if (stream_no == 0)
+			ast_rtp_instance_set_stream_label(p->rtp, atol(s_value));
+		else if (stream_no == 1)
+			ast_rtp_instance_set_stream_label(p->rtp2, atol(s_value));
+		
+		found = TRUE;
+	}
+	free(a_string);
 	return found;
 }
 

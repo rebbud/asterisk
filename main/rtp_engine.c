@@ -79,6 +79,8 @@ struct ast_rtp_instance {
 	struct ast_channel *chan;
 	/*! SRTP info associated with the instance */
 	struct ast_srtp *srtp;
+	/*! DUB - Stream label */
+	long int stream_label;
 };
 
 /*! List of RTP engines that are currently registered */
@@ -2005,6 +2007,19 @@ void ast_rtp_instance_set_hold_timeout(struct ast_rtp_instance *instance, int ti
 {
 	instance->holdtimeout = timeout;
 }
+
+/* DUB - Set & Get stream label in ast RTP instance */
+void ast_rtp_instance_set_stream_label(struct ast_rtp_instance *instance, long int s_label)
+{
+	instance->stream_label = s_label;
+}
+
+long int  ast_rtp_instance_get_stream_label(struct ast_rtp_instance *instance)
+{
+        return instance->stream_label;
+}
+
+/* -------------------------------------------------*/
 
 void ast_rtp_instance_set_keepalive(struct ast_rtp_instance *instance, int interval)
 {

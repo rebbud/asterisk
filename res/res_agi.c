@@ -1084,7 +1084,6 @@ static void dub_channel_build_dtmf_pattern(struct ast_channel *chan, struct ast_
 	
 	ast_channel_set_user_dtmf(chan, stream, (char) f->subclass.integer);
 	ast_channel_set_last_received_digit_tv(chan, stream);
-	ast_log(LOG_NOTICE, "Stream %d: duration ==> %d   user_dtmf ==> %s\n", stream, duration, ast_channel_get_user_dtmf(chan, stream));
 	dub_channel_cmp_dtmf_pattern(chan, stream);
 	return;
 } 
@@ -2669,7 +2668,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			}
 			switch(f->frametype) {
 			case AST_FRAME_DTMF:
-				ast_log(LOG_NOTICE, "DUB: Processing DTMF digit=%c, flag=%d \n", f->subclass.integer, ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+				ast_debug(3, "DUB: Processing DTMF digit=%c, flag=%d \n", f->subclass.integer, ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
 				dub_channel_build_dtmf_pattern(chan, f);
 
 				if (strchr(argv[4], f->subclass.integer)) {
