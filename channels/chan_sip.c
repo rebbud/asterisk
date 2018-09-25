@@ -8242,9 +8242,7 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		if (f && (f->frametype == AST_FRAME_VOICE)) { /* RTP Audio */
 			/* Add flag to distinguish the stream */
 			ast_set_flag(f, AST_FRFLAG_STREAM1);
-			//f->stream_label = ast_rtp_instance_get_stream_label(p->rtp);
-			//ast_log(LOG_NOTICE, "f->stream_label = %ld\n", f->stream_label);
-			ast_log(LOG_NOTICE, "f->stream_label = %ld\n", ast_rtp_instance_get_stream_label(p->rtp));
+			f->stream_label = ast_rtp_instance_get_stream_label(p->rtp);
 		}
 		break;
 	case 6:
@@ -8252,9 +8250,7 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		f = ast_rtp_instance_read(p->rtp2, 0);	
 		if (f && (f->frametype == AST_FRAME_VOICE)) { 
 			ast_set_flag(f, AST_FRFLAG_STREAM2);
-			//f->stream_label = ast_rtp_instance_get_stream_label(p->rtp2);
-			//ast_log(LOG_NOTICE, "f->stream_label = %ld\n", f->stream_label);
-			ast_log(LOG_NOTICE, "f->stream_label = %ld\n", ast_rtp_instance_get_stream_label(p->rtp2));
+			f->stream_label = ast_rtp_instance_get_stream_label(p->rtp2);
 		}
 		break;
 	case 1:
@@ -10438,9 +10434,6 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 					} else if (process_sdp_a_label(value, p, maudioLines)) { /*! DUB - Process the label attribute */
 						processed = TRUE;
 					}
-
-					ast_log(LOG_NOTICE, "Processing media-level (%s) SDP %c=%s... %s\n",
-                                  			"audio", type, value, (processed == TRUE)? "OK." : "UNSUPPORTED OR FAILED.");
 				}
 				/* Video specific scanning */
 				else if (video) {
@@ -11070,6 +11063,8 @@ static int process_sdp_a_label(const char *a, struct sip_pvt *p, int stream_no)
 	if (strstr(a_string, "label") != NULL){
 		char *s_label = strtok(a_string, ":");
 		char *s_value = strtok(NULL, ":");
+
+		ast_debug(3,"%s: %s", s_label, s_value);
 
 		if (stream_no == 0)
 			ast_rtp_instance_set_stream_label(p->rtp, atol(s_value));
