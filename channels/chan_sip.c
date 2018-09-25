@@ -26258,18 +26258,21 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 			}
 
 			 if (c) {
-				int ret_val;
-				char val[20]="\0";
-				size_t val_len=20;
-                         	/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
+				const char *val=NULL;
+				char *stream_label=NULL;
+
+				/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
                          	ast_channel_set_pause_seq(c, sip_cfg.dub_pauseRecord);
                          	ast_channel_set_resume_seq(c, sip_cfg.dub_resumeRecord);
 
 				/* DUB - Set the control stream label */
-				ret_val=func_header_read(c, "SIP_HEADER", "X-Dubber-Call-Control", &val[0], val_len);
-				if(ret_val ==0){
+				if(!ast_strlen_zero(val = sip_get_header(req, "X-Dubber-Call-Control"))) {
 					ast_log(LOG_NOTICE, "X-Dubber-Call-Control: %s\n", val);
-					ast_channel_set_stream_label(c, &val[0]);
+					stream_label = strdup(val);
+					ast_channel_set_stream_label(c, stream_label);
+					free(stream_label);
+				}else {
+					ast_log(LOG_WARNING, "X-Dubber-Call-Control not set, default settings applied !!!\n");
 				}
                  	}
 		}
