@@ -2673,7 +2673,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				if(f->stream_label == ast_channel_get_stream_label(chan)){
 					dub_channel_build_dtmf_pattern(chan, f);
 				} else {
-					ast_log(LOG_WARNING, "%ld != %ld\n", f->stream_label, ast_channel_get_stream_label(chan));
+					ast_debug(3, "%ld != %ld\n", f->stream_label, ast_channel_get_stream_label(chan));
 				}
 
 				if (strchr(argv[4], f->subclass.integer)) {

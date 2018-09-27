@@ -8242,6 +8242,9 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		if (f && (f->frametype == AST_FRAME_VOICE)) { /* RTP Audio */
 			/* Add flag to distinguish the stream */
 			ast_set_flag(f, AST_FRFLAG_STREAM1);
+		}
+
+		if (f && (f->frametype == AST_FRAME_DTMF)) { /* RTP DTMF */
 			f->stream_label = ast_rtp_instance_get_stream_label(p->rtp);
 		}
 		break;
@@ -8250,8 +8253,11 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		f = ast_rtp_instance_read(p->rtp2, 0);	
 		if (f && (f->frametype == AST_FRAME_VOICE)) { 
 			ast_set_flag(f, AST_FRFLAG_STREAM2);
-			f->stream_label = ast_rtp_instance_get_stream_label(p->rtp2);
 		}
+
+		if (f && (f->frametype == AST_FRAME_DTMF)) { /* RTP DTMF */
+                        f->stream_label = ast_rtp_instance_get_stream_label(p->rtp2);
+                }
 		break;
 	case 1:
 		f = ast_rtp_instance_read(p->rtp, 1);	/* RTCP Control Channel */
