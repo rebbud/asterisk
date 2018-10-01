@@ -170,6 +170,8 @@ struct ast_frame {
 	int seqno;
 	/*! Stream SSRC */
 	unsigned int themssrc;
+	/*! DUB - Media Stream Label */
+	long int stream_label;
 };
 
 /*!

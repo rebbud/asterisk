@@ -1379,6 +1379,7 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 static int process_sdp_o(const char *o, struct sip_pvt *p);
 static int process_sdp_c(const char *c, struct ast_sockaddr *addr);
 static int process_sdp_a_sendonly(const char *a, int *sendonly);
+static int process_sdp_a_label(const char *a, struct sip_pvt *p, int stream_no);
 static int process_sdp_a_ice(const char *a, struct sip_pvt *p, struct ast_rtp_instance *instance);
 static int process_sdp_a_dtls(const char *a, struct sip_pvt *p, struct ast_rtp_instance *instance);
 static int process_sdp_a_audio(const char *a, struct sip_pvt *p, struct ast_rtp_codecs *newaudiortp, int *last_rtpmap_codec);
@@ -8241,7 +8242,10 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		if (f && (f->frametype == AST_FRAME_VOICE)) { /* RTP Audio */
 			/* Add flag to distinguish the stream */
 			ast_set_flag(f, AST_FRFLAG_STREAM1);
-			ast_debug(3, "read stream1\n");
+		}
+
+		if (f && (f->frametype == AST_FRAME_DTMF)) { /* RTP DTMF */
+			f->stream_label = ast_rtp_instance_get_stream_label(p->rtp);
 		}
 		break;
 	case 6:
@@ -8249,8 +8253,11 @@ static struct ast_frame *sip_rtp_read(struct ast_channel *ast, struct sip_pvt *p
 		f = ast_rtp_instance_read(p->rtp2, 0);	
 		if (f && (f->frametype == AST_FRAME_VOICE)) { 
 			ast_set_flag(f, AST_FRFLAG_STREAM2);
-			ast_debug(3, "read stream2\n");
 		}
+
+		if (f && (f->frametype == AST_FRAME_DTMF)) { /* RTP DTMF */
+                        f->stream_label = ast_rtp_instance_get_stream_label(p->rtp2);
+                }
 		break;
 	case 1:
 		f = ast_rtp_instance_read(p->rtp, 1);	/* RTCP Control Channel */
@@ -9911,7 +9918,8 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 		res = -1;
 		goto process_sdp_cleanup;
 	}
-/* Shoud we go to process_sdp_cleanup if !p->rtp2 */
+
+	/* Shoud we go to process_sdp_cleanup if !p->rtp2 */
         if (!p->rtp2) {
                 res = -1;
                 goto process_sdp_cleanup;
@@ -10428,6 +10436,8 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 						processed_crypto = TRUE;
 						processed = TRUE;
 					} else if (process_sdp_a_audio(value, p, &newaudiortp[maudioLines], &last_rtpmap_codec)) {
+						processed = TRUE;
+					} else if (process_sdp_a_label(value, p, maudioLines)) { /*! DUB - Process the label attribute */
 						processed = TRUE;
 					}
 				}
@@ -11047,6 +11057,29 @@ static int process_sdp_a_sendonly(const char *a, int *sendonly)
 			*sendonly = 0;
 		found = TRUE;
 	}
+	return found;
+}
+
+/*! DUB - Process the label attribute */
+static int process_sdp_a_label(const char *a, struct sip_pvt *p, int stream_no)
+{
+	int found = FALSE;
+	char *a_string = strdup(a);
+
+	if (strstr(a_string, "label") != NULL){
+		char *s_label = strtok(a_string, ":");
+		char *s_value = strtok(NULL, ":");
+
+		ast_debug(3,"%s: %s", s_label, s_value);
+
+		if (stream_no == 0)
+			ast_rtp_instance_set_stream_label(p->rtp, atol(s_value));
+		else if (stream_no == 1)
+			ast_rtp_instance_set_stream_label(p->rtp2, atol(s_value));
+		
+		found = TRUE;
+	}
+	free(a_string);
 	return found;
 }
 
@@ -21194,6 +21227,7 @@ static char *sip_show_settings(struct ast_cli_entry *e, int cmd, struct ast_cli_
 	ast_cli(a->fd, "  Max forwards:           %d\n", sip_cfg.default_max_forwards);
 	ast_cli(a->fd, "  Pause record:           %s\n", sip_cfg.dub_pauseRecord); //DUB: Recording Pause sequence 
 	ast_cli(a->fd, "  Resume record:          %s\n", sip_cfg.dub_resumeRecord);//DUB: Recording Resume sequence
+	ast_cli(a->fd, "  Record Control:         %d\n", sip_cfg.dub_recordControl);//DUB: Recording Call Control
 
 	ast_cli(a->fd, "\nDefault Settings:\n");
 	ast_cli(a->fd, "-----------------\n");
@@ -26231,9 +26265,31 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 			}
 
 			 if (c) {
-                         	/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
+				const char *val=NULL;
+				char *stream_label=NULL;
+
+				/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
                          	ast_channel_set_pause_seq(c, sip_cfg.dub_pauseRecord);
                          	ast_channel_set_resume_seq(c, sip_cfg.dub_resumeRecord);
+
+				if (sip_cfg.dub_recordControl == TRUE) {
+					ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
+					ast_log(LOG_NOTICE, "DUB - Record Control is enabled !!!\n");
+
+					/* DUB - Set the control stream label */
+					if(!ast_strlen_zero(val = sip_get_header(req, "X-Dubber-Call-Control"))) {
+						ast_log(LOG_NOTICE, "X-Dubber-Call-Control: %s\n", val);
+						stream_label = strdup(val);
+						ast_channel_set_stream_label(c, stream_label);
+						free(stream_label);
+					}else {
+						ast_log(LOG_WARNING, "DUB - X-Dubber-Call-Control not set, default settings applied !!!\n");
+						ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
+					}
+				} else {
+					ast_log(LOG_WARNING, "DUB - Record Control is disabled !!!\n");
+					ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
+				}
                  	}
 		}
 	} else {
@@ -32121,6 +32177,7 @@ static int reload_config(enum channelreloadreason reason)
 	sip_cfg.default_max_forwards = DEFAULT_MAX_FORWARDS;
 	memset(sip_cfg.dub_pauseRecord, 0, DUB_CMD_DIGITS);
 	memset(sip_cfg.dub_resumeRecord, 0, DUB_CMD_DIGITS);
+	sip_cfg.dub_recordControl = FALSE;
 	default_language[0] = '\0';
 	default_fromdomain[0] = '\0';
 	default_fromdomainport = 0;
@@ -32327,7 +32384,6 @@ static int reload_config(enum channelreloadreason reason)
 		} else if (!strcasecmp(v->name, "directrtpsetup")) {
 			sip_cfg.directrtpsetup = ast_true(v->value);
 		} else if (!strcasecmp(v->name, "notifyringing")) {
-			sip_cfg.notifyringing = ast_true(v->value);
 		} else if (!strcasecmp(v->name, "notifyhold")) {
 			sip_cfg.notifyhold = ast_true(v->value);
 		} else if (!strcasecmp(v->name, "notifycid")) {
@@ -32741,6 +32797,11 @@ static int reload_config(enum channelreloadreason reason)
                                 } else {
                                         ast_log(LOG_WARNING, "resume_record=%s exceeds maximum digits(%d)\n", v->value, DUB_CMD_DIGITS-1);
                                 }
+                        }
+                } else if (!strcasecmp(v->name, "record_control")) {
+                        if (!ast_false(v->value)) {
+                                ast_debug(2, "DUB - Enabling Recording Call Control\n");
+                                sip_cfg.dub_recordControl = TRUE;
                         }
                 }
 	}

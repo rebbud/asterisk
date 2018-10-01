@@ -909,6 +909,7 @@ enum {
 	 */
 	AST_FLAG_TIMINGDATA_IS_AO2_OBJ = (1 << 23),	
 	AST_FLAG_DUB_PAUSE_RESUME_RECORDING = (1 << 24), //DUB - Flag for pause / resume
+	AST_FLAG_DUB_RECORDING_CONTROL = (1 << 25), //DUB - Flag for recroding call control
 };
 
 /*! \brief ast_bridge_config flags */
@@ -3994,6 +3995,9 @@ void ast_channel_reset_user_dtmf(struct ast_channel *chan, int stream);
 
 int ast_channel_cmp_pause_recording(struct ast_channel *chan, int stream);
 int ast_channel_cmp_resume_recording(struct ast_channel *chan, int stream);
+
+void ast_channel_set_stream_label(struct ast_channel *chan, char *label);
+long int ast_channel_get_stream_label(struct ast_channel *chan);
 
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL
