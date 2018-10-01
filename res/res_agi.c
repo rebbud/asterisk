@@ -2670,10 +2670,14 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			case AST_FRAME_DTMF:
 				ast_debug(3, "DUB: Processing DTMF digit=%c, flag=%d \n", f->subclass.integer, ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
 				
-				if(f->stream_label == ast_channel_get_stream_label(chan)){
-					dub_channel_build_dtmf_pattern(chan, f);
+				if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORDING_CONTROL)) {
+					if(f->stream_label == ast_channel_get_stream_label(chan)){
+						dub_channel_build_dtmf_pattern(chan, f);
+					} else {
+						ast_debug(3, "%ld != %ld\n", f->stream_label, ast_channel_get_stream_label(chan));
+					}
 				} else {
-					ast_debug(3, "%ld != %ld\n", f->stream_label, ast_channel_get_stream_label(chan));
+					dub_channel_build_dtmf_pattern(chan, f);
 				}
 
 				if (strchr(argv[4], f->subclass.integer)) {

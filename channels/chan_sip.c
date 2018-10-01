@@ -21227,6 +21227,7 @@ static char *sip_show_settings(struct ast_cli_entry *e, int cmd, struct ast_cli_
 	ast_cli(a->fd, "  Max forwards:           %d\n", sip_cfg.default_max_forwards);
 	ast_cli(a->fd, "  Pause record:           %s\n", sip_cfg.dub_pauseRecord); //DUB: Recording Pause sequence 
 	ast_cli(a->fd, "  Resume record:          %s\n", sip_cfg.dub_resumeRecord);//DUB: Recording Resume sequence
+	ast_cli(a->fd, "  Record Control:         %d\n", sip_cfg.dub_recordControl);//DUB: Recording Call Control
 
 	ast_cli(a->fd, "\nDefault Settings:\n");
 	ast_cli(a->fd, "-----------------\n");
@@ -26271,14 +26272,23 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
                          	ast_channel_set_pause_seq(c, sip_cfg.dub_pauseRecord);
                          	ast_channel_set_resume_seq(c, sip_cfg.dub_resumeRecord);
 
-				/* DUB - Set the control stream label */
-				if(!ast_strlen_zero(val = sip_get_header(req, "X-Dubber-Call-Control"))) {
-					ast_log(LOG_NOTICE, "X-Dubber-Call-Control: %s\n", val);
-					stream_label = strdup(val);
-					ast_channel_set_stream_label(c, stream_label);
-					free(stream_label);
-				}else {
-					ast_log(LOG_WARNING, "X-Dubber-Call-Control not set, default settings applied !!!\n");
+				if (sip_cfg.dub_recordControl == TRUE) {
+					ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
+					ast_log(LOG_NOTICE, "DUB - Record Control is enabled !!!\n");
+
+					/* DUB - Set the control stream label */
+					if(!ast_strlen_zero(val = sip_get_header(req, "X-Dubber-Call-Control"))) {
+						ast_log(LOG_NOTICE, "X-Dubber-Call-Control: %s\n", val);
+						stream_label = strdup(val);
+						ast_channel_set_stream_label(c, stream_label);
+						free(stream_label);
+					}else {
+						ast_log(LOG_WARNING, "DUB - X-Dubber-Call-Control not set, default settings applied !!!\n");
+						ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
+					}
+				} else {
+					ast_log(LOG_WARNING, "DUB - Record Control is disabled !!!\n");
+					ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
 				}
                  	}
 		}
@@ -32167,6 +32177,7 @@ static int reload_config(enum channelreloadreason reason)
 	sip_cfg.default_max_forwards = DEFAULT_MAX_FORWARDS;
 	memset(sip_cfg.dub_pauseRecord, 0, DUB_CMD_DIGITS);
 	memset(sip_cfg.dub_resumeRecord, 0, DUB_CMD_DIGITS);
+	sip_cfg.dub_recordControl = FALSE;
 	default_language[0] = '\0';
 	default_fromdomain[0] = '\0';
 	default_fromdomainport = 0;
@@ -32373,7 +32384,6 @@ static int reload_config(enum channelreloadreason reason)
 		} else if (!strcasecmp(v->name, "directrtpsetup")) {
 			sip_cfg.directrtpsetup = ast_true(v->value);
 		} else if (!strcasecmp(v->name, "notifyringing")) {
-			sip_cfg.notifyringing = ast_true(v->value);
 		} else if (!strcasecmp(v->name, "notifyhold")) {
 			sip_cfg.notifyhold = ast_true(v->value);
 		} else if (!strcasecmp(v->name, "notifycid")) {
@@ -32787,6 +32797,11 @@ static int reload_config(enum channelreloadreason reason)
                                 } else {
                                         ast_log(LOG_WARNING, "resume_record=%s exceeds maximum digits(%d)\n", v->value, DUB_CMD_DIGITS-1);
                                 }
+                        }
+                } else if (!strcasecmp(v->name, "record_control")) {
+                        if (!ast_false(v->value)) {
+                                ast_debug(2, "DUB - Enabling Recording Call Control\n");
+                                sip_cfg.dub_recordControl = TRUE;
                         }
                 }
 	}

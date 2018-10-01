@@ -909,6 +909,7 @@ enum {
 	 */
 	AST_FLAG_TIMINGDATA_IS_AO2_OBJ = (1 << 23),	
 	AST_FLAG_DUB_PAUSE_RESUME_RECORDING = (1 << 24), //DUB - Flag for pause / resume
+	AST_FLAG_DUB_RECORDING_CONTROL = (1 << 25), //DUB - Flag for recroding call control
 };
 
 /*! \brief ast_bridge_config flags */
