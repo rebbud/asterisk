@@ -1157,14 +1157,11 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     int64_t gap_ms=0;
     struct timeval s_tv = ast_channel_get_rec_start_time(chan);
     unsigned int themssrc=ast_channel_get_last_ssrc(chan, stream_no);
-    //int ssrc_change=0;
     
     /*! Check SSRC */
     if ((f->themssrc != 0) && (f->themssrc != themssrc)){
         ast_log(LOG_NOTICE, "STREAM %d ==== SSRC changed (%u) to (%u)\n", stream_no, themssrc, f->themssrc);
         ast_channel_set_last_ssrc(chan, f->themssrc, stream_no);
-        //themssrc = f->themssrc;
-        //ssrc_change=1;
     } else if (f->themssrc == themssrc) {
         //Same SSRC conti with the function
     }else {
@@ -1180,7 +1177,6 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     max_pkts /= f_ptime;
     
     /*! First - Check if it is the 1st packet for the stream and fix the initial delay of streams */
-    //if ((ast_channel_get_pkt_count(chan, stream_no) == 0) || (ssrc_change == 1)){
     if (ast_channel_get_pkt_count(chan, stream_no) == 0){
         ast_log(LOG_NOTICE, "Stream %d: Processing 1st packet (SSRC: %u)...\n", stream_no, themssrc);
         ast_channel_set_pkt_count(chan, stream_no);
@@ -1189,10 +1185,6 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
             ast_log(LOG_NOTICE, "Stream %d: Setting the Record Start time (SSRC: %u)...\n", stream_no, themssrc);
             ast_channel_set_rec_start_time(chan);
         }else {
-            //if ((ssrc_change == 1) && (ast_tvcmp(ast_channel_get_rec_end_ts(chan, stream_no), ast_tv(0, 0)) > 0)){
-            //    s_tv = ast_channel_get_rec_end_ts(chan, stream_no);
-            //}
-            
             gap_ms = ast_tvdiff_ms(ast_tvnow(), s_tv);
 	    nframes = gap_ms/f_ptime;
             
