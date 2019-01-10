@@ -1160,8 +1160,8 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     
     /*! Check SSRC */
     if ((f->themssrc != 0) && (f->themssrc != themssrc)){
-        ast_log(LOG_NOTICE, "STREAM %d ==== SSRC changed (%u) to (%u)\n", stream_no, themssrc, f->themssrc);
-        ast_channel_set_last_ssrc(chan, f->themssrc, stream_no);
+	ast_log(LOG_NOTICE, "STREAM %d ==== SSRC changed (%u) to (%u)\n", stream_no, themssrc, f->themssrc);
+	ast_channel_set_last_ssrc(chan, f->themssrc, stream_no);
 	themssrc = f->themssrc;
     } else if (f->themssrc == themssrc) {
         //Same SSRC conti with the function
