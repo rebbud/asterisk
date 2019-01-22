@@ -167,6 +167,7 @@ extern "C" {
 
 /* DUB - Limit the DTMF sequence to pause/resume recording to three digits */
 #define DUB_CMD_DIGITS 4
+#define DUB_PNR_EVENTS 2048
 
 enum ast_bridge_result {
 	AST_BRIDGE_COMPLETE = 0,
@@ -3998,6 +3999,10 @@ int ast_channel_cmp_resume_recording(struct ast_channel *chan, int stream);
 
 void ast_channel_set_stream_label(struct ast_channel *chan, char *label);
 long int ast_channel_get_stream_label(struct ast_channel *chan);
+
+void ast_channel_set_pause_resume_events(struct ast_channel *chan);
+char * ast_channel_get_pause_resume_events(struct ast_channel *chan);
+void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event);
 
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL

@@ -211,6 +211,7 @@ struct ast_channel {
         long int s2_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream2 */
 	long int packet_size_1;				/*!< DUB - ptime of Stream1 */
 	long int packet_size_2;				/*!< DUB - ptime of Stream2 */
+	struct timeval pause_start_time;		/*!< DUB - Recording Pausse Start time */
 	struct timeval rec_start_time;			/*!< DUB - Recording Start time */
 	struct timeval rec_s1_end_ts;			/*!< DUB - Recording Stream 1 end ts */
 	struct timeval rec_s2_end_ts;			/*!< DUB - Recording Stream 2 end ts */
@@ -221,6 +222,7 @@ struct ast_channel {
 	struct dub_collect_dtmf dub_dtmf_store1; 	/*!< DUB - Store the received DTMF pattern of Stream1 */
 	struct dub_collect_dtmf dub_dtmf_store2; 	/*!< DUB - Store the received DTMF pattern of Stream2 */
 	long int  stream_label; 			/*!< DUB - Stream label */
+	char pause_resume_events[DUB_PNR_EVENTS];	/*!< DUB - Pause & resume events */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1579,6 +1581,52 @@ char * ast_channel_get_resume_seq(struct ast_channel *chan)
         else
                 return NULL;
 }
+
+/*! Pause & Resume events */
+void ast_channel_set_pause_resume_events(struct ast_channel *chan)
+{
+	snprintf(chan->pause_resume_events, sizeof(chan->pause_resume_events), "\"pause_resume_events\": []");
+}
+
+char * ast_channel_get_pause_resume_events(struct ast_channel *chan)
+{
+        if (chan->pause_resume_events)
+		return chan->pause_resume_events;
+	else
+		return NULL;
+}
+
+void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event)
+{
+	struct timeval pnr_event = ast_tvnow();
+ 
+	if (event == 0){
+		chan->pause_start_time = pnr_event;
+		chan->pause_resume_events[strlen(chan->pause_resume_events)-1]='\0';
+	}
+
+	if (event == 0) {
+		snprintf(chan->pause_resume_events, sizeof(chan->pause_resume_events), "%s \{\"paused_at\": \"%ld\",", 
+											chan->pause_resume_events, 
+											ast_tvdiff_sec(pnr_event, chan->rec_start_time));
+	}else {
+		snprintf(chan->pause_resume_events, sizeof(chan->pause_resume_events), "%s \"resume_at\": \"%ld\", \"pause_duration\": \"%ld\"\}]", 
+											chan->pause_resume_events, 
+											ast_tvdiff_sec(pnr_event, chan->rec_start_time), 
+											ast_tvdiff_sec(pnr_event, chan->pause_start_time));
+	}
+}
+
+/*! Pause start time  
+void ast_channel_set_pause_start_time(struct ast_channel *chan)
+{
+        chan->pause_start_time = ast_tvnow();
+}
+
+struct timeval ast_channel_get_pause_start_time(struct ast_channel *chan)
+{
+        return chan->pause_start_time;
+} */
 
 /*! Set & get the timestamp of the last received dtmf */
 struct timeval ast_channel_get_last_received_digit_tv(struct ast_channel *chan, int stream)
