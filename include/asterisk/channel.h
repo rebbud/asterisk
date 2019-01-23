@@ -4004,6 +4004,8 @@ void ast_channel_set_pause_resume_events(struct ast_channel *chan);
 char * ast_channel_get_pause_resume_events(struct ast_channel *chan);
 void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event);
 
+char *replace_str(char *str, char *orig, char *rep);
+
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL
 struct ast_epoll_data *ast_channel_internal_epfd_data(const struct ast_channel *chan, int which);
