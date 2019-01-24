@@ -206,9 +206,9 @@ struct ast_channel {
 	long int s1_extra_pkt;				/*!< DUB - Count of extra packets on Stream1 */
 	long int s2_extra_pkt;				/*!< DUB - Count of extra packets on Stream2 */
 	long int stream1_last_ts;                       /*!< DUB - Last TS of Stream1 */
-        long int stream2_last_ts;			/*!< DUB - Last TS of Stream2 */
-        long int s1_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream1 */
-        long int s2_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream2 */
+	long int stream2_last_ts;			/*!< DUB - Last TS of Stream2 */
+	long int s1_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream1 */
+	long int s2_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream2 */
 	long int packet_size_1;				/*!< DUB - ptime of Stream1 */
 	long int packet_size_2;				/*!< DUB - ptime of Stream2 */
 	long int pause_start_time;			/*!< DUB - Recording Pause Start time */
