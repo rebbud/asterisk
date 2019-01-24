@@ -167,7 +167,7 @@ extern "C" {
 
 /* DUB - Limit the DTMF sequence to pause/resume recording to three digits */
 #define DUB_CMD_DIGITS 4
-#define DUB_PNR_EVENTS 2048
+#define DUB_PNR_EVENTS 4096
 
 enum ast_bridge_result {
 	AST_BRIDGE_COMPLETE = 0,
