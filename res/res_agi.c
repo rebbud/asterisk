@@ -3711,7 +3711,7 @@ static enum agi_result agi_handle_command(struct ast_channel *chan, AGI *agi, ch
 {
 	const char *argv[MAX_ARGS];
 	int argc = MAX_ARGS;
-	int res;
+	int res, i;
 	agi_command *c;
 	const char *ami_res;
 	char *ami_cmd = ast_strdupa(buf);
@@ -3736,6 +3736,7 @@ static enum agi_result agi_handle_command(struct ast_channel *chan, AGI *agi, ch
 			ast_cdr_setapp(ast_channel_cdr(chan), "AGI", buf);
 
 		res = c->handler(chan, agi, argc, argv);
+
 		if (c->mod != ast_module_info->self)
 			ast_module_unref(c->mod);
 		switch (res) {

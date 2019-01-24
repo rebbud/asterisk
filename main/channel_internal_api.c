@@ -1635,7 +1635,7 @@ void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event)
                 snprintf(chan->pause_resume_events, sizeof(chan->pause_resume_events), "%s \{\"paused_at\": \"%ld\", \"resume_at\": \"NULL\", \"pause_duration\": \"NULL\"\}]",
                                                                                         buffer,
                                                                                         chan->pause_start_time);
-                ast_log(LOG_NOTICE, "PAUSE : pause_resume_events === %s\n", chan->pause_resume_events);
+                ast_debug(3, "PAUSE : pause_resume_events === %s\n", chan->pause_resume_events);
         }else {
 		long int call_resumed_at = ast_tvdiff_sec(pnr_event, chan->rec_start_time);
 		snprintf(resume_at, sizeof(resume_at), "%ld", call_resumed_at);
@@ -1649,7 +1649,7 @@ void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event)
 		str_len = asprintf(&buffer, "%s", chan->pause_resume_events);
 		snprintf(chan->pause_resume_events, sizeof(chan->pause_resume_events), "%s", replace_str(buffer, "NULL", pause_duration));
 
-                ast_log(LOG_NOTICE, "RESUME : pause_resume_events === %s\n", chan->pause_resume_events);
+                ast_debug(3, "RESUME : pause_resume_events === %s\n", chan->pause_resume_events);
         }
 
         free(buffer);
