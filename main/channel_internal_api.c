@@ -1560,10 +1560,7 @@ void ast_channel_set_pause_seq(struct ast_channel *chan, char *dub_pauseRecord)
 
 char * ast_channel_get_pause_seq(struct ast_channel *chan)
 {
-	if (chan->dub_pauseRecord)
-		return chan->dub_pauseRecord;
-	else
-		return NULL;
+	return chan->dub_pauseRecord;
 }
 
 void ast_channel_set_resume_seq(struct ast_channel *chan, char *dub_resumeRecord)
@@ -1577,10 +1574,7 @@ void ast_channel_set_resume_seq(struct ast_channel *chan, char *dub_resumeRecord
 
 char * ast_channel_get_resume_seq(struct ast_channel *chan)
 {
-        if (chan->dub_resumeRecord)
-                return chan->dub_resumeRecord;
-        else
-                return NULL;
+	return chan->dub_resumeRecord;
 }
 
 /*! Pause & Resume events */
@@ -1591,10 +1585,7 @@ void ast_channel_set_pause_resume_events(struct ast_channel *chan)
 
 char * ast_channel_get_pause_resume_events(struct ast_channel *chan)
 {
-	if (chan->pause_resume_events)
-		return chan->pause_resume_events;
-	else
-		return NULL;
+	return chan->pause_resume_events;
 }
 
 /*! Function to replace the first occurance of the word (orig) with another string (rep) */
