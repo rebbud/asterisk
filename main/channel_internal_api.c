@@ -211,7 +211,7 @@ struct ast_channel {
         long int s2_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream2 */
 	long int packet_size_1;				/*!< DUB - ptime of Stream1 */
 	long int packet_size_2;				/*!< DUB - ptime of Stream2 */
-	long int pause_start_time;			/*!< DUB - Recording Pausse Start time */
+	long int pause_start_time;			/*!< DUB - Recording Pause Start time */
 	struct timeval rec_start_time;			/*!< DUB - Recording Start time */
 	struct timeval rec_s1_end_ts;			/*!< DUB - Recording Stream 1 end ts */
 	struct timeval rec_s2_end_ts;			/*!< DUB - Recording Stream 2 end ts */
@@ -222,8 +222,8 @@ struct ast_channel {
 	struct dub_collect_dtmf dub_dtmf_store1; 	/*!< DUB - Store the received DTMF pattern of Stream1 */
 	struct dub_collect_dtmf dub_dtmf_store2; 	/*!< DUB - Store the received DTMF pattern of Stream2 */
 	long int  stream_label; 			/*!< DUB - Stream label */
-	char pause_resume_events[DUB_PNR_EVENTS];	/*!< DUB - Pause & resume events */
-	int pnr_event_counter;				/*!< DUB - Pause & resume events counter */
+	char pause_resume_events[DUB_PAUSE_RESUME_EVENTS];	/*!< DUB - Pause & resume events */
+	int pause_resume_event_counter;				/*!< DUB - Pause & resume events counter */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1591,12 +1591,13 @@ void ast_channel_set_pause_resume_events(struct ast_channel *chan)
 
 char * ast_channel_get_pause_resume_events(struct ast_channel *chan)
 {
-        if (chan->pause_resume_events)
+	if (chan->pause_resume_events)
 		return chan->pause_resume_events;
 	else
 		return NULL;
 }
 
+/*! Function to replace the first occurance of the word (orig) with another string (rep) */
 char *replace_str(char *str, char *orig, char *rep)
 {
 	static char buffer[4096];
@@ -1621,10 +1622,10 @@ void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event)
 	char resume_at[10]="\0", pause_duration[10]="\0"; 
 
         if (event == 0){
-		chan->pnr_event_counter+=1;
+		chan->pause_resume_event_counter+=1;
                 chan->pause_start_time = ast_tvdiff_sec(pnr_event, chan->rec_start_time);
 		
-		if (chan->pnr_event_counter == 1)
+		if (chan->pause_resume_event_counter == 1)
                 	chan->pause_resume_events[strlen(chan->pause_resume_events)-1]='\0';
 		else
 			chan->pause_resume_events[strlen(chan->pause_resume_events)-1]=',';
