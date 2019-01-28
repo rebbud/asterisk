@@ -1612,17 +1612,15 @@ void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event)
 	char *buffer=NULL;
 	char resumed_at[10]="\0", paused_duration[10]="\0"; 
 
-        if (event == 0){
-		chan->pause_resume_event_counter+=1;
+        if (event == PAUSE_EVENT) {
+		chan->pause_resume_event_counter+=1; /*! Counter to identify number of Pause events */
 		chan->pause_start_time = ast_tvdiff_sec(pnr_event, chan->rec_start_time);
-		
-		if (chan->pause_resume_event_counter == 1)
-                	chan->pause_resume_events[strlen(chan->pause_resume_events)-1]='\0';
-		else
-			chan->pause_resume_events[strlen(chan->pause_resume_events)-1]=',';
-        }
 
-        if (event == 0) {
+		if (chan->pause_resume_event_counter == 1)
+                        chan->pause_resume_events[strlen(chan->pause_resume_events)-1]='\0';
+                else
+                        chan->pause_resume_events[strlen(chan->pause_resume_events)-1]=',';
+
                 str_len = asprintf(&buffer, "%s", chan->pause_resume_events);
                 snprintf(chan->pause_resume_events, sizeof(chan->pause_resume_events), "%s \{\"paused_at\": \"%ld\", \"resumed_at\": \"NULL\", \"paused_duration\": \"NULL\"\}]",
                                                                                         buffer,

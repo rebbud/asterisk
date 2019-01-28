@@ -1026,11 +1026,11 @@ static struct agi_cmd *get_agi_cmd(struct ast_channel *chan)
 	return cmd;
 }
 
-/* DUB - Define pause resume events  */
+/* DUB - Define pause resume events  
 enum pause_resume_events {
     PAUSE_EVENT = 0,
     RESUME_EVENT = 1
-};
+}; */
 
 /*! DUB - Compare the received pattern against the configured one */
 static void dub_channel_cmp_dtmf_pattern(struct ast_channel *chan, int stream)

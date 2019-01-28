@@ -768,6 +768,12 @@ struct ast_hangup_handler {
 	char args[0];
 };
 
+/* DUB - Define pause resume events  */
+enum pause_resume_events {
+    PAUSE_EVENT = 0,
+    RESUME_EVENT = 1
+};
+
 AST_LIST_HEAD_NOLOCK(ast_hangup_handler_list, ast_hangup_handler);
 AST_LIST_HEAD_NOLOCK(ast_datastore_list, ast_datastore);
 AST_LIST_HEAD_NOLOCK(ast_autochan_list, ast_autochan);
