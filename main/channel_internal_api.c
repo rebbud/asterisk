@@ -206,11 +206,12 @@ struct ast_channel {
 	long int s1_extra_pkt;				/*!< DUB - Count of extra packets on Stream1 */
 	long int s2_extra_pkt;				/*!< DUB - Count of extra packets on Stream2 */
 	long int stream1_last_ts;                       /*!< DUB - Last TS of Stream1 */
-        long int stream2_last_ts;			/*!< DUB - Last TS of Stream2 */
-        long int s1_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream1 */
-        long int s2_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream2 */
+	long int stream2_last_ts;			/*!< DUB - Last TS of Stream2 */
+	long int s1_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream1 */
+	long int s2_last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream2 */
 	long int packet_size_1;				/*!< DUB - ptime of Stream1 */
 	long int packet_size_2;				/*!< DUB - ptime of Stream2 */
+	long int pause_start_time;			/*!< DUB - Recording Pause Start time */
 	struct timeval rec_start_time;			/*!< DUB - Recording Start time */
 	struct timeval rec_s1_end_ts;			/*!< DUB - Recording Stream 1 end ts */
 	struct timeval rec_s2_end_ts;			/*!< DUB - Recording Stream 2 end ts */
@@ -221,6 +222,8 @@ struct ast_channel {
 	struct dub_collect_dtmf dub_dtmf_store1; 	/*!< DUB - Store the received DTMF pattern of Stream1 */
 	struct dub_collect_dtmf dub_dtmf_store2; 	/*!< DUB - Store the received DTMF pattern of Stream2 */
 	long int  stream_label; 			/*!< DUB - Stream label */
+	char pause_resume_events[DUB_PAUSE_RESUME_EVENTS];	/*!< DUB - Pause & resume events */
+	int pause_resume_event_counter;				/*!< DUB - Pause & resume events counter */
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1557,10 +1560,7 @@ void ast_channel_set_pause_seq(struct ast_channel *chan, char *dub_pauseRecord)
 
 char * ast_channel_get_pause_seq(struct ast_channel *chan)
 {
-	if (chan->dub_pauseRecord)
-		return chan->dub_pauseRecord;
-	else
-		return NULL;
+	return chan->dub_pauseRecord;
 }
 
 void ast_channel_set_resume_seq(struct ast_channel *chan, char *dub_resumeRecord)
@@ -1574,10 +1574,75 @@ void ast_channel_set_resume_seq(struct ast_channel *chan, char *dub_resumeRecord
 
 char * ast_channel_get_resume_seq(struct ast_channel *chan)
 {
-        if (chan->dub_resumeRecord)
-                return chan->dub_resumeRecord;
-        else
-                return NULL;
+	return chan->dub_resumeRecord;
+}
+
+/*! Pause & Resume events */
+void ast_channel_set_pause_resume_events(struct ast_channel *chan)
+{
+	snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "\"pause_resume_events\": []");
+}
+
+char * ast_channel_get_pause_resume_events(struct ast_channel *chan)
+{
+	return chan->pause_resume_events;
+}
+
+/*! Function to replace the first occurance of the word (orig) with another string (rep) */
+char *replace_str(char *str, char *orig, char *rep)
+{
+	static char buffer[4096];
+	char *p;
+
+	if(!(p = strstr(str, orig)))  // Is 'orig' even in 'str'?
+		return str;
+
+	strncpy(buffer, str, p-str); // Copy characters from 'str' start to 'orig' st$
+	buffer[p-str] = '\0';
+
+	sprintf(buffer+(p-str), "%s%s", rep, p+strlen(orig));
+
+	return buffer;
+}
+
+void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event)
+{
+	int str_len=0;
+	struct timeval pnr_event = ast_tvnow();
+	char *buffer=NULL;
+	char resumed_at[10]="\0", paused_duration[10]="\0"; 
+
+        if (event == PAUSE_EVENT) {
+		chan->pause_resume_event_counter+=1; /*! Counter to identify number of Pause events */
+		chan->pause_start_time = ast_tvdiff_sec(pnr_event, chan->rec_start_time);
+
+		if (chan->pause_resume_event_counter == 1)
+                        chan->pause_resume_events[strlen(chan->pause_resume_events)-1]='\0';
+                else
+                        chan->pause_resume_events[strlen(chan->pause_resume_events)-1]=',';
+
+                str_len = asprintf(&buffer, "%s", chan->pause_resume_events);
+                snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "%s \{\"paused_at\": \"%ld\", \"resumed_at\": \"NULL\", \"paused_duration\": \"NULL\"\}]",
+                                                                           buffer,
+                                                                           chan->pause_start_time);
+                ast_debug(3, "PAUSE : pause_resume_events === %s\n", chan->pause_resume_events);
+        }else {
+		long int call_resumed_at = ast_tvdiff_sec(pnr_event, chan->rec_start_time);
+		snprintf(resumed_at, sizeof(resumed_at), "%ld", call_resumed_at);
+		snprintf(paused_duration, sizeof(paused_duration), "%ld", call_resumed_at - chan->pause_start_time);
+
+		/*! Update resumed_at */
+                str_len = asprintf(&buffer, "%s", chan->pause_resume_events);
+		snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "%s", replace_str(buffer, "NULL", resumed_at));
+		/*! Update paused_duration */
+		free(buffer);
+		str_len = asprintf(&buffer, "%s", chan->pause_resume_events);
+		snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "%s", replace_str(buffer, "NULL", paused_duration));
+
+                ast_debug(3, "RESUME : pause_resume_events === %s\n", chan->pause_resume_events);
+        }
+
+        free(buffer);
 }
 
 /*! Set & get the timestamp of the last received dtmf */

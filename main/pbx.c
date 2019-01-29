@@ -3670,6 +3670,9 @@ const char *ast_str_retrieve_variable(struct ast_str **str, ssize_t maxlen, stru
 		} else if (!strcmp(var, "HANGUPCAUSE")) {
 			ast_str_set(str, maxlen, "%d", ast_channel_hangupcause(c));
 			s = ast_str_buffer(*str);
+		} else if (!strcmp(var, "PAUSE_RESUME_EVENTS")) {
+			ast_str_set(str, maxlen, "%s", ast_channel_get_pause_resume_events(c));
+			s = ast_str_buffer(*str);
 		}
 	}
 	if (s == &not_found) { /* look for more */
@@ -6775,6 +6778,7 @@ static enum ast_pbx_result __ast_pbx_run(struct ast_channel *c,
 				struct timeval rec_end_ts = (ast_tvcmp(ast_channel_get_rec_end_ts(c,1), ast_channel_get_rec_end_ts(c,2))<0)?ast_channel_get_rec_end_ts(c,2):ast_channel_get_rec_end_ts(c,1);
 				int64_t rec_duration = ast_tvdiff_sec(rec_end_ts, ast_channel_get_rec_start_time(c));
 				ast_verb(2, "%s: Recording Duration (seconds): %ld\n", ast_channel_name(c), ++rec_duration);
+				ast_verb(2, "%s: Pause & Resume events: %s\n", ast_channel_name(c), ast_channel_get_pause_resume_events(c));
 			
 				if ((res == AST_PBX_ERROR)
 					&& ast_exists_extension(c, ast_channel_context(c), "e", 1,

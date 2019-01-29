@@ -26271,6 +26271,7 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 				/* DUB - Set the Pause/Resume DTMF Sequence in Channel */
                          	ast_channel_set_pause_seq(c, sip_cfg.dub_pauseRecord);
                          	ast_channel_set_resume_seq(c, sip_cfg.dub_resumeRecord);
+				ast_channel_set_pause_resume_events(c);
 
 				if (sip_cfg.dub_recordControl == TRUE) {
 					ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);

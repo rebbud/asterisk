@@ -167,6 +167,7 @@ extern "C" {
 
 /* DUB - Limit the DTMF sequence to pause/resume recording to three digits */
 #define DUB_CMD_DIGITS 4
+#define DUB_PAUSE_RESUME_EVENTS 4096
 
 enum ast_bridge_result {
 	AST_BRIDGE_COMPLETE = 0,
@@ -765,6 +766,12 @@ struct ast_hangup_handler {
 	AST_LIST_ENTRY(ast_hangup_handler) node;
 	/*! Hangup handler arg string passed to the Gosub application */
 	char args[0];
+};
+
+/* DUB - Define pause resume events  */
+enum pause_resume_events {
+    PAUSE_EVENT = 0,
+    RESUME_EVENT = 1
 };
 
 AST_LIST_HEAD_NOLOCK(ast_hangup_handler_list, ast_hangup_handler);
@@ -3998,6 +4005,12 @@ int ast_channel_cmp_resume_recording(struct ast_channel *chan, int stream);
 
 void ast_channel_set_stream_label(struct ast_channel *chan, char *label);
 long int ast_channel_get_stream_label(struct ast_channel *chan);
+
+void ast_channel_set_pause_resume_events(struct ast_channel *chan);
+char * ast_channel_get_pause_resume_events(struct ast_channel *chan);
+void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event);
+
+char *replace_str(char *str, char *orig, char *rep);
 
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL

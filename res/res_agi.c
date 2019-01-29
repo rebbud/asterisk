@@ -1034,13 +1034,15 @@ static void dub_channel_cmp_dtmf_pattern(struct ast_channel *chan, int stream)
 		/* DUB - Set flag to pause recording */
 		ast_set_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
 		ast_log(LOG_NOTICE, "DUB - (Stream %d) set flag=%d and paused the recording !!!\n", stream, ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
-                ast_channel_reset_user_dtmf(chan, stream);
+		ast_channel_reset_user_dtmf(chan, stream);
+		ast_channel_update_pause_resume_events(chan, PAUSE_EVENT);
 	} else if (!ast_channel_cmp_resume_recording(chan, stream)  && 
 		  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
 		/* DUB - Clear pause recording flag */
 		ast_clear_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
 		ast_log(LOG_NOTICE, "DUB - (Stream %d) cleared flag=%d and recording has resumed !!!\n", stream, ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
 		ast_channel_reset_user_dtmf(chan, stream);
+		ast_channel_update_pause_resume_events(chan, RESUME_EVENT);
         }
 
         return;
