@@ -1580,7 +1580,7 @@ char * ast_channel_get_resume_seq(struct ast_channel *chan)
 /*! Pause & Resume events */
 void ast_channel_set_pause_resume_events(struct ast_channel *chan)
 {
-	snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "");
+	chan->pause_resume_events[0] = '\0';
 }
 
 char * ast_channel_get_pause_resume_events(struct ast_channel *chan)
@@ -1622,7 +1622,7 @@ void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event)
                         chan->pause_resume_events[strlen(chan->pause_resume_events)-1]=',';
 
                 str_len = asprintf(&buffer, "%s", chan->pause_resume_events);
-                snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "%s \{\"paused_at\": \"%ld\", \"resumed_at\": null, \"paused_duration\": null\}]",
+                snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "%s {\"paused_at\": \"%ld\", \"resumed_at\": null, \"paused_duration\": null}]",
                                                                            buffer,
                                                                            chan->pause_start_time);
                 ast_debug(3, "PAUSE : pause_resume_events === %s\n", chan->pause_resume_events);
