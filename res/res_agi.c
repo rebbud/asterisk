@@ -1143,7 +1143,8 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
         j++;
     }
 
-    ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) -- %d EXTRA FRAME WRITTEN !!!\n", stream_no, themssrc, j);
+    if (j > 1)
+    	ast_log(LOG_WARNING, "STREAM %d (SSRC: %u) -- %d EXTRA FRAME WRITTEN !!!\n", stream_no, themssrc, j);
     ast_channel_set_extra_pkt_count(chan, stream_no, j);
     ast_frfree(duped_frame); /* free the duped_frame frame */
     return 0;
@@ -1267,9 +1268,6 @@ static int add_single_silence_packet(struct ast_channel *chan, struct ast_frame 
         f_ptime=20;
 
     f_no = ast_channel_get_last_ts(chan, stream_no)+f_ptime;
-
-    ast_log(LOG_NOTICE, "STREAM %d -- f_no: %ld\tf_ptime: %ld\tl_no: %ld\n", stream_no, f_no, f_ptime, f_ptime+f_no);
-
     insert_silence(chan, f, fs, stream_no, f_no, f_ptime, f_ptime+f_no, themssrc);
 
     /*! Save the ts and sequence number for the next check */
@@ -2723,7 +2721,8 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				}
 				break;
 			case AST_FRAME_VOICE:
-				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING) &&
+				    !ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENCE_THE_PUASE)) {
 					if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
 						ast_debug(3, "Write Stream1\n");
 						add_silence(chan, f, fs, 1);
@@ -2735,13 +2734,15 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					}else {
 						ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
 					}
-				} else {
-                                        if (ast_test_flag(f, AST_FRFLAG_STREAM1))
+				} else if(ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING) &&
+					  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENCE_THE_PUASE)) {
+                                        if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
                                                 add_single_silence_packet(chan, f, fs, 1);
-                                        else if (ast_test_flag(f, AST_FRFLAG_STREAM2))
+                                        } else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
                                                 add_single_silence_packet(chan, f, fs2, 2);
-                                        else
+                                        } else {
                                                 ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
+					}
                                 }
 
 				/* this is a safe place to check progress since we know that fs
