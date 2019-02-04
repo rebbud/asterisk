@@ -2721,8 +2721,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				}
 				break;
 			case AST_FRAME_VOICE:
-				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING) &&
-				    !ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENCE_THE_PUASE)) {
+				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
 					if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
 						ast_debug(3, "Write Stream1\n");
 						add_silence(chan, f, fs, 1);
@@ -2734,16 +2733,17 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					}else {
 						ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
 					}
-				} else if(ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING) &&
-					  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENCE_THE_PUASE)) {
-                                        if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
-                                                add_single_silence_packet(chan, f, fs, 1);
-                                        } else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
-                                                add_single_silence_packet(chan, f, fs2, 2);
-                                        } else {
-                                                ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
+				} else {
+					if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENCE_THE_PUASE)) {
+                                        	if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
+                                                	add_single_silence_packet(chan, f, fs, 1);
+                                        	} else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
+                                                	add_single_silence_packet(chan, f, fs2, 2);
+                                        	} else {
+                                                	ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
+						}
 					}
-                                }
+				}
 
 				/* this is a safe place to check progress since we know that fs
 				 * is valid after a write, and it will then have our current
