@@ -32815,6 +32815,11 @@ static int reload_config(enum channelreloadreason reason)
                                 ast_debug(2, "DUB - Enabling Recording Call Control\n");
                                 sip_cfg.dub_recordControl = TRUE;
                         }
+                } else if (!strcasecmp(v->name, "silence_the_pause")) {
+                        if (!ast_false(v->value)) {
+                                ast_debug(2, "DUB - Enabling Silence The Pause Control\n");
+                                sip_cfg.dub_silence_the_pause = TRUE;
+                        }
                 }
 	}
 
