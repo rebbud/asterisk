@@ -1248,6 +1248,37 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     return 0;
 }
 
+/*! DUB - Add silence silence packet to the Recording file */
+static int add_single_silence_packet(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no)
+{
+    long int f_no=0, f_ptime=0;
+    unsigned int themssrc=ast_channel_get_last_ssrc(chan, stream_no);
+
+    /*! Check SSRC */
+    if ((f->themssrc != 0) && (f->themssrc != themssrc)){
+        ast_log(LOG_NOTICE, "STREAM %d ==== SSRC changed (%u) to (%u)\n", stream_no, themssrc, f->themssrc);
+        ast_channel_set_last_ssrc(chan, f->themssrc, stream_no);
+        themssrc = f->themssrc;
+    }
+
+    /*! ptime for the stream */
+    f_ptime=ast_channel_get_ptime(chan, stream_no);
+    if(f_ptime < 5)
+        f_ptime=20;
+
+    f_no = ast_channel_get_last_ts(chan, stream_no)+f_ptime;
+
+    ast_log(LOG_NOTICE, "STREAM %d -- f_no: %ld\tf_ptime: %ld\tl_no: %ld\n", stream_no, f_no, f_ptime, f_ptime+f_no);
+
+    insert_silence(chan, f, fs, stream_no, f_no, f_ptime, f_ptime+f_no, themssrc);
+
+    /*! Save the ts and sequence number for the next check */
+    ast_channel_set_last_ts(chan, f->ts, stream_no);
+    ast_channel_set_last_seq(chan, f->seqno, stream_no);
+    ast_channel_set_rec_end_ts(chan, stream_no);
+    return 0;
+}
+
 
 /* channel is locked when calling this one either from the CLI or manager thread */
 static int add_agi_cmd(struct ast_channel *chan, const char *cmd_buff, const char *cmd_id)
@@ -2704,7 +2735,14 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					}else {
 						ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
 					}
-				}
+				} else {
+                                        if (ast_test_flag(f, AST_FRFLAG_STREAM1))
+                                                add_single_silence_packet(chan, f, fs, 1);
+                                        else if (ast_test_flag(f, AST_FRFLAG_STREAM2))
+                                                add_single_silence_packet(chan, f, fs2, 2);
+                                        else
+                                                ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
+                                }
 
 				/* this is a safe place to check progress since we know that fs
 				 * is valid after a write, and it will then have our current
