@@ -2734,7 +2734,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 						ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
 					}
 				} else {
-					if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENCE_THE_PUASE)) {
+					if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENT_PAUSE_DURATION)) {
                                         	if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
                                                 	add_single_silence_packet(chan, f, fs, 1);
                                         	} else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {

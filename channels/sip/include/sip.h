@@ -786,7 +786,7 @@ struct sip_settings {
 	char dub_pauseRecord[DUB_CMD_DIGITS];  /*!< DUB - DTMF pattern sequence to pause recording */
 	char dub_resumeRecord[DUB_CMD_DIGITS]; /*!< DUB - DTMF pattern sequence to resume recording */
 	int dub_recordControl;		/*! DUB - Call Record Controller */
-	int dub_silence_the_pause;	/*! DUB - Silence the pause duration */
+	int dub_silent_pause_duration;	/*! DUB - Silent pause duration */
 };
 
 /*! \brief The SIP socket definition */
