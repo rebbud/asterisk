@@ -21228,6 +21228,7 @@ static char *sip_show_settings(struct ast_cli_entry *e, int cmd, struct ast_cli_
 	ast_cli(a->fd, "  Pause record:           %s\n", sip_cfg.dub_pauseRecord); //DUB: Recording Pause sequence 
 	ast_cli(a->fd, "  Resume record:          %s\n", sip_cfg.dub_resumeRecord);//DUB: Recording Resume sequence
 	ast_cli(a->fd, "  Record Control:         %d\n", sip_cfg.dub_recordControl);//DUB: Recording Call Control
+	ast_cli(a->fd, "  Record Silent Pause:    %d\n", sip_cfg.dub_record_silent_pause);//DUB: Insert silence for the paused duration
 
 	ast_cli(a->fd, "\nDefault Settings:\n");
 	ast_cli(a->fd, "-----------------\n");
@@ -26273,6 +26274,7 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
                          	ast_channel_set_resume_seq(c, sip_cfg.dub_resumeRecord);
 				ast_channel_set_pause_resume_events(c);
 
+				/*! DUB - Enable call recording control */
 				if (sip_cfg.dub_recordControl == TRUE) {
 					ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
 					ast_log(LOG_NOTICE, "DUB - Record Control is enabled !!!\n");
@@ -26290,6 +26292,15 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 				} else {
 					ast_log(LOG_WARNING, "DUB - Record Control is disabled !!!\n");
 					ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
+				}
+
+				/*! DUB - Silence the pause */
+				if (sip_cfg.dub_record_silent_pause == TRUE) {
+                                        ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORD_SILENT_PAUSE);
+                                        ast_log(LOG_NOTICE, "DUB - Record silent pause is enabled !!!\n");
+				} else {
+					ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORD_SILENT_PAUSE);
+					ast_log(LOG_NOTICE, "DUB - Record silent pause is disabled !!!\n");
 				}
                  	}
 		}
@@ -32803,6 +32814,11 @@ static int reload_config(enum channelreloadreason reason)
                         if (!ast_false(v->value)) {
                                 ast_debug(2, "DUB - Enabling Recording Call Control\n");
                                 sip_cfg.dub_recordControl = TRUE;
+                        }
+                } else if (!strcasecmp(v->name, "record_silent_pause")) {
+                        if (!ast_false(v->value)) {
+                                ast_debug(2, "DUB - Enabling Record Silent Pause Control\n");
+                                sip_cfg.dub_record_silent_pause = TRUE;
                         }
                 }
 	}
