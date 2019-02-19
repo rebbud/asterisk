@@ -21228,7 +21228,7 @@ static char *sip_show_settings(struct ast_cli_entry *e, int cmd, struct ast_cli_
 	ast_cli(a->fd, "  Pause record:           %s\n", sip_cfg.dub_pauseRecord); //DUB: Recording Pause sequence 
 	ast_cli(a->fd, "  Resume record:          %s\n", sip_cfg.dub_resumeRecord);//DUB: Recording Resume sequence
 	ast_cli(a->fd, "  Record Control:         %d\n", sip_cfg.dub_recordControl);//DUB: Recording Call Control
-	ast_cli(a->fd, "  Silent Pause Duration:  %d\n", sip_cfg.dub_silent_pause_duration);//DUB: Insert silence for the paused duration
+	ast_cli(a->fd, "  Record Silent Pause:    %d\n", sip_cfg.dub_record_silent_pause);//DUB: Insert silence for the paused duration
 
 	ast_cli(a->fd, "\nDefault Settings:\n");
 	ast_cli(a->fd, "-----------------\n");
@@ -26295,12 +26295,12 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 				}
 
 				/*! DUB - Silence the pause */
-				if (sip_cfg.dub_silent_pause_duration == TRUE) {
-                                        ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_SILENT_PAUSE_DURATION);
-                                        ast_log(LOG_NOTICE, "DUB - Silent pause duration is enabled !!!\n");
+				if (sip_cfg.dub_record_silent_pause == TRUE) {
+                                        ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORD_SILENT_PAUSE);
+                                        ast_log(LOG_NOTICE, "DUB - Record silent pause is enabled !!!\n");
 				} else {
-					ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_SILENT_PAUSE_DURATION);
-					ast_log(LOG_NOTICE, "DUB - Silent pause duration is disabled !!!\n");
+					ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORD_SILENT_PAUSE);
+					ast_log(LOG_NOTICE, "DUB - Record silent pause is disabled !!!\n");
 				}
                  	}
 		}
@@ -32815,10 +32815,10 @@ static int reload_config(enum channelreloadreason reason)
                                 ast_debug(2, "DUB - Enabling Recording Call Control\n");
                                 sip_cfg.dub_recordControl = TRUE;
                         }
-                } else if (!strcasecmp(v->name, "silent_pause_duration")) {
+                } else if (!strcasecmp(v->name, "record_silent_pause")) {
                         if (!ast_false(v->value)) {
-                                ast_debug(2, "DUB - Enabling Silent Pause Duration Control\n");
-                                sip_cfg.dub_silent_pause_duration = TRUE;
+                                ast_debug(2, "DUB - Enabling Record Silent Pause Control\n");
+                                sip_cfg.dub_record_silent_pause = TRUE;
                         }
                 }
 	}
