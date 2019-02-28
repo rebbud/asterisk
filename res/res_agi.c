@@ -2786,7 +2786,6 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			if (gotsilence)
 				break;
 		}
-		free(filename);
 
 		if (gotsilence) {
 			ast_stream_rewind(fs, silence-1000);
