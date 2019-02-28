@@ -2576,10 +2576,14 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 
 	/* XXX EAGI FIXME XXX */
 
-	if (argc < 6)
+	if (argc < 6){
+		free(filename);
 		return RESULT_SHOWUSAGE;
-	if (sscanf(argv[5], "%30d", &ms) != 1)
+	}
+	if (sscanf(argv[5], "%30d", &ms) != 1){
+		free(filename);
 		return RESULT_SHOWUSAGE;
+	}
 
 	if (argc > 6)
 		silencestr = strchr(argv[6],'s');
@@ -2607,12 +2611,14 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 		if (res < 0) {
 			ast_log(LOG_WARNING, "Unable to set to linear mode, giving up\n");
 			ast_agi_send(agi->fd, chan, "200 result=%d\n", res);
+			free(filename);
 			return RESULT_FAILURE;
 		}
 		sildet = ast_dsp_new();
 		if (!sildet) {
 			ast_log(LOG_WARNING, "Unable to create silence detector :(\n");
 			ast_agi_send(agi->fd, chan, "200 result=-1\n");
+			free(filename);
 			return RESULT_FAILURE;
 		}
 		ast_dsp_set_threshold(sildet, ast_dsp_get_threshold_from_settings(THRESHOLD_SILENCE));
@@ -2679,6 +2685,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				ast_agi_send(agi->fd, chan, "200 result=%d (waitfor) endpos=%ld\n", res,sample_offset);
 				if (sildet)
 					ast_dsp_free(sildet);
+				free(filename);
 				return RESULT_FAILURE;
 			}
 			f = ast_read(chan);
@@ -2689,6 +2696,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				ast_closestream(fs2);
 				if (sildet)
 					ast_dsp_free(sildet);
+				free(filename);
 				return RESULT_FAILURE;
 			}
 			switch(f->frametype) {
@@ -2717,6 +2725,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					ast_frfree(f);
 					if (sildet)
 						ast_dsp_free(sildet);
+					free(filename);
 					return RESULT_SUCCESS;
 				}
 				break;
@@ -2777,7 +2786,6 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			if (gotsilence)
 				break;
 		}
-		free(filename);
 
 		if (gotsilence) {
 			ast_stream_rewind(fs, silence-1000);
@@ -2796,6 +2804,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 		ast_dsp_free(sildet);
 	}
 
+	free(filename);
 	return RESULT_SUCCESS;
 }
 
