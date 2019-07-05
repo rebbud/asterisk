@@ -13250,18 +13250,18 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 	char subject[256];				/* Subject of the session */
 	char owner[256];				/* Session owner/creator */
 	char connection[256];				/* Connection data */
-	char *session_time = "t=0 0\r\n"; 			/* Time the session is active */
+	char *session_time = "t=0 0\r\n"; 		/* Time the session is active */
 	char bandwidth[256] = "";			/* Max bitrate */
 	char *hold = "";
 	struct ast_str *m_audio = ast_str_alloca(256);  /* Media declaration line for audio */
-	struct ast_str *m_audio2 = ast_str_alloca(256);  /* Media declaration line for audio2 */
+	struct ast_str *m_audio2 = ast_str_alloca(256); /* Media declaration line for audio2 */
 	struct ast_str *m_video = ast_str_alloca(256);  /* Media declaration line for video */
 	struct ast_str *m_text = ast_str_alloca(256);   /* Media declaration line for text */
 	struct ast_str *m_modem = ast_str_alloca(256);  /* Media declaration line for modem */
-	struct ast_str *a_audio = ast_str_create(256); /* Attributes for audio */
+	struct ast_str *a_audio = ast_str_create(256);  /* Attributes for audio */
 	struct ast_str *a_audio2 = ast_str_create(256); /* Attributes for audio */
-	struct ast_str *a_video = ast_str_create(256); /* Attributes for video */
-	struct ast_str *a_text = ast_str_create(256);  /* Attributes for text */
+	struct ast_str *a_video = ast_str_create(256);  /* Attributes for video */
+	struct ast_str *a_text = ast_str_create(256);   /* Attributes for text */
 	struct ast_str *a_modem = ast_str_alloca(1024); /* Attributes for modem */
 	const char *a_crypto = NULL;
 	const char *v_a_crypto = NULL;
@@ -13540,7 +13540,15 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 		if (!p->owner || ast_channel_timingfd(p->owner) == -1) {
 			ast_str_append(&a_audio, 0, "a=silenceSupp:off - - - -\r\n");
 			ast_str_append(&a_audio2, 0, "a=silenceSupp:off - - - -\r\n");
+
+			/*! DUB - Add label attribute back to the SDP in the 200OK response */
+			if (ast_rtp_instance_get_stream_label(p->rtp) > 0)
+				ast_str_append(&a_audio, 0, "a=label:%ld\r\n", ast_rtp_instance_get_stream_label(p->rtp));
+
+			if (ast_rtp_instance_get_stream_label(p->rtp2) > 0)
+				ast_str_append(&a_audio2, 0, "a=label:%ld\r\n", ast_rtp_instance_get_stream_label(p->rtp2));
 		}
+
 
 		if (min_audio_packet_size) {
 			ast_str_append(&a_audio, 0, "a=ptime:%d\r\n", min_audio_packet_size);
@@ -13879,8 +13887,9 @@ static int transmit_response_with_sdp(struct sip_pvt *p, const char *msg, const 
 			ast_debug(1, "Setting framing from config on incoming call\n");
 			ast_rtp_codecs_packetization_set(ast_rtp_instance_get_codecs(p->rtp), p->rtp, &p->prefs);
 		}
+
 		ast_rtp_instance_activate(p->rtp);
-/* Enable 2nd audio */
+		/* Enable 2nd audio */
 		ast_rtp_instance_activate(p->rtp2);
 
 		try_suggested_sip_codec(p);
