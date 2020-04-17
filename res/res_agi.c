@@ -2375,25 +2375,23 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
         ast_log(LOG_NOTICE, "Setting the Record Start time \n" );
     }else{	
-
- 	f_ptime = ast_channel_get_ptime(chan);
+        f_ptime = ast_channel_get_ptime(chan);
 	if(f_ptime < 5)
            f_ptime=20;
 
-	max_pkts /= f_ptime;
-        gap_ms = ast_tvdiff_ms(ast_tvnow(), s_tv);
-        nframes = gap_ms/f_ptime;
+        max_pkts /= f_ptime;
+        gap_ms   = ast_tvdiff_ms(ast_tvnow(), s_tv);
+        nframes  = gap_ms/f_ptime;
 
         if ((nframes > MAX_FRAME_GAP ) && (nframes < max_pkts)){
-              ast_log(LOG_WARNING, "Gap=%ld (ms)...\n", gap_ms);
-              ast_debug(1, " Gap : %ld\t f->ts: %ld\t \n", gap_ms, f->ts);
-              insert_silence(chan, f, fs, 0, f_ptime, gap_ms);
+             ast_log(LOG_WARNING, "Gap=%ld (ms)...\n", gap_ms);
+             ast_debug(1, " Gap : %ld\t f->ts: %ld\t \n", gap_ms, f->ts);
+             insert_silence(chan, f, fs, 0, f_ptime, gap_ms);
         } else {
-
-             if (nframes > max_pkts)
-                 ast_log(LOG_ERROR, "RTP delayed by %ld (ms) > (2 hours)...\n", gap_ms);
-             else
-                 ast_log(LOG_NOTICE, "No need of Silence insertion" );
+          if (nframes > max_pkts)
+              ast_log(LOG_ERROR, "RTP delayed by %ld (ms) > (2 hours)...\n", gap_ms);
+          else
+              ast_log(LOG_NOTICE, "No need of Silence insertion" );
         }
     }
     ast_channel_set_last_rec_time(chan);

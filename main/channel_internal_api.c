@@ -196,7 +196,7 @@ struct ast_channel {
 	char sending_dtmf_digit;			/*!< Digit this channel is currently sending out. (zero if not sending) */
 	struct timeval sending_dtmf_tv;		/*!< The time this channel started sending the current digit. (Invalid if sending_dtmf_digit is zero.) */
 	/* DUB Changes */
-	long int packet_size;
+        long int packet_size;
         struct timeval last_rec_time;
 };
 
