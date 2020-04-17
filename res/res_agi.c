@@ -2376,7 +2376,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
         ast_log(LOG_NOTICE, "Setting the Record Start time \n" );
     }else{	
         f_ptime = ast_channel_get_ptime(chan);
-	if(f_ptime < 5)
+        if(f_ptime < 5)
            f_ptime=20;
 
         max_pkts /= f_ptime;
@@ -2532,7 +2532,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			case AST_FRAME_VOICE:
 				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
 					ast_debug(5, "DUB, recording\n");
-                                        add_silence(chan, f, fs);
+					add_silence(chan, f, fs);
 					ast_writestream(fs, f);
 				        
 					/* this is a safe place to check progress since we know that fs
