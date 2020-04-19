@@ -2391,7 +2391,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
           if (nframes > max_pkts)
               ast_log(LOG_ERROR, "RTP delayed by %ld (ms) > (2 hours)...\n", gap_ms);
           else
-              ast_log(LOG_NOTICE, "No need of Silence insertion" );
+              ast_log(LOG_NOTICE, "No need of Silence insertion\n");
         }
     }
     ast_channel_set_last_rec_time(chan);
@@ -2491,8 +2491,10 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 		/* really should have checks */
 		ast_seekstream(fs, sample_offset, SEEK_SET);
 		ast_truncstream(fs);
-
 		start = ast_tvnow();
+		/* DUB adding start time to check silence in the begining */
+                ast_channel_set_last_rec_time(chan);
+
 		while ((ms < 0) || ast_tvdiff_ms(ast_tvnow(), start) < ms) {
 			res = ast_waitfor(chan, ms - ast_tvdiff_ms(ast_tvnow(), start));
 			if (res < 0) {
