@@ -70,7 +70,7 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 #define AST_API_MODULE
 #include "asterisk/agi.h"
 
-#define MAX_FRAME_GAP 5
+#define MIN_FRAME_GAP 5
 
 /*** DOCUMENTATION
 	<agi name="answer" language="en_US">
@@ -2383,7 +2383,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
         gap_ms   = ast_tvdiff_ms(ast_tvnow(), s_tv);
         nframes  = gap_ms/f_ptime;
 
-        if ((nframes > MAX_FRAME_GAP ) && (nframes < max_pkts)){
+        if ((nframes > MIN_FRAME_GAP ) && (nframes < max_pkts)){
              ast_log(LOG_WARNING, "Gap=%ld (ms)...\n", gap_ms);
              ast_debug(1, " Gap : %ld\t f->ts: %ld\t \n", gap_ms, f->ts);
              insert_silence(chan, f, fs, 0, f_ptime, gap_ms);
