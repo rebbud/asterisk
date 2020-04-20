@@ -2390,8 +2390,6 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
         } else {
           if (nframes > max_pkts)
               ast_log(LOG_ERROR, "RTP delayed by %ld (ms) > (2 hours)...\n", gap_ms);
-          else
-              ast_log(LOG_NOTICE, "No need of Silence insertion\n");
         }
     }
     ast_channel_set_last_rec_time(chan);
