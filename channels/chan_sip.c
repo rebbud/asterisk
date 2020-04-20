@@ -10988,6 +10988,8 @@ static int process_sdp_a_audio(const char *a, struct sip_pvt *p, struct ast_rtp_
 				framing = 0;
 				ast_debug(1, "Can't read framing from SDP: %s\n", a);
 			}
+			 /* DUB - Set the framing for the m-line */
+			p->packet_size = framing;
 		}
 		if (framing && p->autoframing) {
 			struct ast_codec_pref *pref = &ast_rtp_instance_get_codecs(p->rtp)->pref;
@@ -26200,6 +26202,7 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 			transmit_response(p, "100 Trying", req);
 			break;
 		}
+		ast_channel_set_ptime(c, p->packet_size);
 	} else {
 		if (!req->ignore && p && (p->autokillid == -1)) {
 			const char *msg;

@@ -3951,6 +3951,11 @@ void ast_channel_internal_fd_clear_all(struct ast_channel *chan);
 void ast_channel_internal_fd_set(struct ast_channel *chan, int which, int value);
 int ast_channel_fd(const struct ast_channel *chan, int which);
 int ast_channel_fd_isset(const struct ast_channel *chan, int which);
+/* DUB Changes */
+long int ast_channel_get_ptime(const struct ast_channel *chan);
+void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime);
+struct timeval ast_channel_get_last_rec_time(struct ast_channel *chan);
+void ast_channel_get_last_set_time(struct ast_channel *chan);
 
 /* epoll data internal accessors */
 #ifdef HAVE_EPOLL

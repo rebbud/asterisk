@@ -195,6 +195,9 @@ struct ast_channel {
 	char dtmf_digit_to_emulate;			/*!< Digit being emulated */
 	char sending_dtmf_digit;			/*!< Digit this channel is currently sending out. (zero if not sending) */
 	struct timeval sending_dtmf_tv;		/*!< The time this channel started sending the current digit. (Invalid if sending_dtmf_digit is zero.) */
+	/* DUB Changes */
+	long int packet_size;
+	struct timeval last_rec_time;
 };
 
 /* AST_DATA definitions, which will probably have to be re-thought since the channel will be opaque */
@@ -1387,4 +1390,26 @@ void ast_channel_internal_finalize(struct ast_channel *chan)
 int ast_channel_internal_is_finalized(struct ast_channel *chan)
 {
 	return chan->finalized;
+}
+
+/*! Get and Set ptime for Stream1 & Stream2 */
+long int ast_channel_get_ptime(const struct ast_channel *chan)
+{
+                return chan->packet_size;
+}
+
+void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime)
+{
+                chan->packet_size = s_ptime;
+}
+
+/*! Set the recording start time */
+void ast_channel_set_last_rec_time(struct ast_channel *chan)
+{
+        chan->last_rec_time = ast_tvnow();
+}
+
+struct timeval ast_channel_get_last_rec_time(struct ast_channel *chan)
+{
+        return chan->last_rec_time;
 }

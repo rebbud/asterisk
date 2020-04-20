@@ -1206,6 +1206,7 @@ struct sip_pvt {
 	struct sip_srtp *srtp;              /*!< Structure to hold Secure RTP session data for audio */
 	struct sip_srtp *vsrtp;             /*!< Structure to hold Secure RTP session data for video */
 	struct sip_srtp *tsrtp;             /*!< Structure to hold Secure RTP session data for text */
+	long int packet_size;               /*!< DUB - Packet Size */
 
 	int red;                            /*!< T.140 RTP Redundancy */
 	int hangupcause;                    /*!< Storage of hangupcause copied from our owner before we disconnect from the AST channel (only used at hangup) */

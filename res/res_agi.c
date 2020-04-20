@@ -70,6 +70,8 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 #define AST_API_MODULE
 #include "asterisk/agi.h"
 
+#define MIN_FRAME_GAP 5
+
 /*** DOCUMENTATION
 	<agi name="answer" language="en_US">
 		<synopsis>
@@ -2300,6 +2302,101 @@ static int handle_setpriority(struct ast_channel *chan, AGI *agi, int argc, cons
 	ast_agi_send(agi->fd, chan, "200 result=0\n");
 	return RESULT_SUCCESS;
 }
+/* DUB inserting silence */
+static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, long int ts_start, long int f_ptime, long int gap_ms)
+{
+    int j=0;
+    short buf[f->datalen];
+    struct ast_frame *duped_frame = NULL;
+    unsigned char g729_filler[] = {
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+        114, 170, 255, 103, 54, 82, 216, 110, 255, 81
+    };
+
+    /* Generating silent frame */
+    switch (f->subclass.format.id) {
+        case AST_FORMAT_G729A:
+            memcpy(buf, g729_filler, f->datalen);
+            break;
+        case AST_FORMAT_ULAW:
+        case AST_FORMAT_ALAW:
+            memset(buf, 0, sizeof(buf));
+            break;
+        default:
+            memset(buf, 0, sizeof(buf));
+    }
+
+    duped_frame = ast_frdup(f);
+    duped_frame->data.ptr = &buf;
+    duped_frame->delivery.tv_sec -= (int) gap_ms/1000;
+    duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
+
+    for (;ts_start<gap_ms;ts_start+=f_ptime) {
+        duped_frame->ts = ts_start;
+        duped_frame->delivery.tv_usec += (f_ptime*100);
+        duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
+        duped_frame->delivery.tv_usec %= 1000000;
+
+        ast_debug(1, "EXTRA FRAME - seqno: %d\t delivery_ts: %ld.%06ld\t ts: %ld\n", duped_frame->seqno, duped_frame->delivery.tv_sec, 
+		  duped_frame->delivery.tv_usec, duped_frame->ts);
+
+        ast_writestream(fs, duped_frame);
+        j++;
+    }
+    	
+    if (j > 1)
+        ast_log(LOG_WARNING, " %d EXTRA FRAME WRITTEN !!!\n",j);
+   	
+    ast_frfree(duped_frame); /* free the duped_frame frame */
+    return 0;
+}	
+
+/* DUB adding silence packets */
+static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs)
+{
+    long int max_pkts   = (2*60*60*1000);
+    long int nframes    = 0;
+    long int f_ptime    = 0;
+    int64_t gap_ms      = 0;
+    struct timeval s_tv = ast_channel_get_last_rec_time(chan);
+   
+    if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
+        ast_log(LOG_NOTICE, "Setting the Record Start time \n" );
+    }else{	
+        f_ptime = ast_channel_get_ptime(chan);
+        if(f_ptime < 5)
+           f_ptime=20;
+
+        max_pkts /= f_ptime;
+        gap_ms   = ast_tvdiff_ms(ast_tvnow(), s_tv);
+        nframes  = gap_ms/f_ptime;
+
+        if ((nframes > MIN_FRAME_GAP ) && (nframes < max_pkts)){
+             ast_log(LOG_WARNING, "Gap=%ld (ms)...\n", gap_ms);
+             ast_debug(1, " Gap : %ld\t f->ts: %ld\t \n", gap_ms, f->ts);
+             insert_silence(chan, f, fs, 0, f_ptime, gap_ms);
+        } else {
+          if (nframes > max_pkts)
+              ast_log(LOG_ERROR, "RTP delayed by %ld (ms) > (2 hours)...\n", gap_ms);
+          else
+              ast_log(LOG_NOTICE, "No need of Silence insertion\n");
+        }
+    }
+    ast_channel_set_last_rec_time(chan);
+    return 0;
+}
 
 static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const char * const argv[])
 {
@@ -2394,8 +2491,10 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 		/* really should have checks */
 		ast_seekstream(fs, sample_offset, SEEK_SET);
 		ast_truncstream(fs);
-
 		start = ast_tvnow();
+		/* DUB adding start time to check silence in the begining */
+                ast_channel_set_last_rec_time(chan);
+
 		while ((ms < 0) || ast_tvdiff_ms(ast_tvnow(), start) < ms) {
 			res = ast_waitfor(chan, ms - ast_tvdiff_ms(ast_tvnow(), start));
 			if (res < 0) {
@@ -2435,7 +2534,9 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			case AST_FRAME_VOICE:
 				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
 					ast_debug(5, "DUB, recording\n");
+					add_silence(chan, f, fs);
 					ast_writestream(fs, f);
+				        
 					/* this is a safe place to check progress since we know that fs
 					 * is valid after a write, and it will then have our current
 					 * location */
