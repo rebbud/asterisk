@@ -2490,8 +2490,6 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 		ast_seekstream(fs, sample_offset, SEEK_SET);
 		ast_truncstream(fs);
 		start = ast_tvnow();
-		/* DUB adding start time to check silence in the begining */
-                ast_channel_set_last_rec_time(chan);
 
 		while ((ms < 0) || ast_tvdiff_ms(ast_tvnow(), start) < ms) {
 			res = ast_waitfor(chan, ms - ast_tvdiff_ms(ast_tvnow(), start));
