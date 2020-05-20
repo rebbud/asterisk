@@ -13181,6 +13181,7 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 
 		/* We break with the "recommendation" and send our IP, in order that our
 		   peer doesn't have to ast_gethostbyname() us */
+
  		/* DUB handling srtp in case of late sdp negotiation */
                 if(p->late_sdp_negotiation == 1 && ast_rtp_engine_srtp_is_registered() )
                 {
@@ -25841,10 +25842,10 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 			p->relatedpeer = sip_ref_peer(authpeer, "setting dialog's relatedpeer pointer");
 		}
 
-		req->authenticated = 1;
+		req->authenticated      = 1;
+                p->late_sdp_negotiation = 0;
 
 		/* We have a successful authentication, process the SDP portion if there is one */
-                p->late_sdp_negotiation = 0;
 		if (find_sdp(req)) {
 			if (process_sdp(p, req, SDP_T38_INITIATE)) {
 				/* Asterisk does not yet support any Content-Encoding methods.  Always
