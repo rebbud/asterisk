@@ -13182,6 +13182,12 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 		/* We break with the "recommendation" and send our IP, in order that our
 		   peer doesn't have to ast_gethostbyname() us */
 
+ 		/* DUB handling srtp in case of late sdp negotiation */
+                if(p->late_sdp_negotiation == 1 && ast_rtp_engine_srtp_is_registered() )
+                {
+                   ast_debug(2,"Got late_sdp_negotiation and encryption=yes, fecthing crypto keys for offer\n");
+                   setup_srtp(&p->srtp);
+                }
 		get_crypto_attrib(p, p->srtp, &a_crypto);
 		ast_str_append(&m_audio, 0, "m=audio %d %s", ast_sockaddr_port(&dest),
 			       get_sdp_rtp_profile(p, a_crypto ? 1 : 0, p->rtp));
@@ -25836,7 +25842,8 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 			p->relatedpeer = sip_ref_peer(authpeer, "setting dialog's relatedpeer pointer");
 		}
 
-		req->authenticated = 1;
+		req->authenticated      = 1;
+                p->late_sdp_negotiation = 0;
 
 		/* We have a successful authentication, process the SDP portion if there is one */
 		if (find_sdp(req)) {
@@ -25859,6 +25866,8 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 		} else {	/* No SDP in invite, call control session */
 			ast_format_cap_copy(p->jointcaps, p->caps);
 			ast_debug(2, "No SDP in Invite, third party call control\n");
+                        /* DUB setting the variable to be used in caseof encryption is yes */
+                        p->late_sdp_negotiation = 1;
 		}
 
 		/* Initialize the context if it hasn't been already */
