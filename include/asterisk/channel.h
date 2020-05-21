@@ -907,6 +907,7 @@ enum {
 	AST_FLAG_TIMINGDATA_IS_AO2_OBJ = (1 << 23),
 
 	AST_FLAG_DUB_PAUSE_RESUME_RECORDING = (1 << 24),
+	AST_FLAG_DUB_SRTP_CALL              = (1 << 25), /* DUB require SRTP call ( late negotiation)*/
 };
 
 /*! \brief ast_bridge_config flags */

@@ -13183,11 +13183,12 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 		   peer doesn't have to ast_gethostbyname() us */
 
  		/* DUB handling srtp in case of late sdp negotiation */
-                if(p->late_sdp_negotiation == 1 && ast_rtp_engine_srtp_is_registered() )
-                {
-                   ast_debug(2,"Got late_sdp_negotiation and encryption=yes, fecthing crypto keys for offer\n");
-                   setup_srtp(&p->srtp);
-                }
+		if (ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_SRTP_CALL) && 
+			p->late_sdp_negotiation == 1 && ast_rtp_engine_srtp_is_registered() )
+		{
+			ast_debug(2,"Got late_sdp_negotiation and encryption=yes, fecthing crypto keys for offer\n");
+			setup_srtp(&p->srtp);
+		}
 		get_crypto_attrib(p, p->srtp, &a_crypto);
 		ast_str_append(&m_audio, 0, "m=audio %d %s", ast_sockaddr_port(&dest),
 			       get_sdp_rtp_profile(p, a_crypto ? 1 : 0, p->rtp));
@@ -26049,6 +26050,15 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 
 	/* Check if OLI/ANI-II is present in From: */
 	parse_oli(req, p->owner);
+	if (c) {
+		const char *val=NULL;
+		if (!ast_strlen_zero(val = sip_get_header(req, "X-Srtp-Call"))) {
+			ast_debug(2, "DUB X-Srtp-Call: %s\n", val);
+			if (!strcmp(val,"True") || !strcmp(val,"true")) {
+				ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_SRTP_CALL);
+			}
+		}
+	}
 
 	if (reinvite && p->stimer->st_active == TRUE) {
 		restart_session_timer(p);
