@@ -404,7 +404,7 @@ tryagain:
 
 	if (res != err_status_ok && res != err_status_replay_fail ) {
 		if ((srtp->warned >= 10) && !((srtp->warned - 10) % 100)) {
-			ast_log(AST_LOG_WARNING, "SRTP unprotect failed with: %s %d\n", srtp_errstr(res), srtp->warned);
+			//ast_log(AST_LOG_WARNING, "SRTP unprotect failed with: %s %d\n", srtp_errstr(res), srtp->warned);
 			srtp->warned = 11;
 		} else {
 			srtp->warned++;
