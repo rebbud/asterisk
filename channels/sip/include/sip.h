@@ -1205,6 +1205,7 @@ struct sip_pvt {
 	struct sip_invite_param *options;   /*!< Options for INVITE */
 	struct sip_st_dlg *stimer;          /*!< SIP Session-Timers */
 	struct sip_srtp *srtp;              /*!< Structure to hold Secure RTP session data for audio */
+	struct sip_srtp *srtp2;             /*!< DUB - Structure to hold Secure RTP session data for audio */
 	struct sip_srtp *vsrtp;             /*!< Structure to hold Secure RTP session data for video */
 	struct sip_srtp *tsrtp;             /*!< Structure to hold Secure RTP session data for text */
 
