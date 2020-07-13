@@ -10461,17 +10461,18 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 						}
 					} else if (process_sdp_a_sendonly(value, &sendonly)) {
 						processed = TRUE;
-					} else if (!processed_crypto && maudioLines == 0 && process_crypto(p, p->rtp, &p->srtp, value)) { //DUB - Stream
-						ast_log(LOG_NOTICE, "Stream %d\n\n", maudioLines);
+					} else if (!processed_crypto && maudioLines == 0 && process_crypto(p, p->rtp, &p->srtp, value)) {
+						/*! DUB - Stream 1 */
 						processed_crypto = TRUE;
 						processed = TRUE;
-					} else if (!processed_crypto && maudioLines == 1 && process_crypto(p, p->rtp2, &p->srtp2, value)) { //DUB - Stream
-                                                ast_log(LOG_NOTICE, "Stream %d\n\n", maudioLines);
+					} else if (!processed_crypto && maudioLines == 1 && process_crypto(p, p->rtp2, &p->srtp2, value)) {
+						/*! DUB - Stream 2 */
                                                 processed_crypto = TRUE;
                                                 processed = TRUE;
                                         } else if (process_sdp_a_audio(value, p, &newaudiortp[maudioLines], &last_rtpmap_codec)) {
 						processed = TRUE;
-					} else if (process_sdp_a_label(value, p, maudioLines)) { /*! DUB - Process the label attribute */
+					} else if (process_sdp_a_label(value, p, maudioLines)) {
+						/*! DUB - Process the label attribute */
 						processed = TRUE;
 					}
 				}
@@ -13503,10 +13504,10 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 		get_crypto_attrib(p, p->srtp2, &a_crypto2);
 
 		ast_str_append(&m_audio, 0, "m=audio %d %s", ast_sockaddr_port(&dest),
-			       get_sdp_rtp_profile(p, a_crypto ? 1 : 0, p->rtp));
+				get_sdp_rtp_profile(p, a_crypto ? 1 : 0, p->rtp));
 
 		ast_str_append(&m_audio2, 0, "m=audio %d %s", ast_sockaddr_port(&dest2),
-					get_sdp_rtp_profile(p, a_crypto2 ? 1 : 0, p->rtp2));
+				get_sdp_rtp_profile(p, a_crypto2 ? 1 : 0, p->rtp2));
 
 
 		/* Now, start adding audio codecs. These are added in this order:
@@ -13795,6 +13796,9 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 			add_content(resp, hold);
 			if (a_crypto) {
 				add_content(resp, a_crypto);
+			}
+			if (a_crypto2) {
+				add_content(resp, a_crypto2);
 			}
 		}
 		if (needvideo) { /* only if video response is appropriate */
