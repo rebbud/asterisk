@@ -4717,16 +4717,25 @@ static int sip_setoption(struct ast_channel *chan, int option, void *data, int d
 		if (p->rtp) {
 			res = ast_rtp_instance_set_read_format(p->rtp, (struct ast_format *) data);
 		}
+                if (p->rtp2) {
+                        res = ast_rtp_instance_set_read_format(p->rtp2, (struct ast_format *) data);
+                }
 		break;
 	case AST_OPTION_FORMAT_WRITE:
 		if (p->rtp) {
 			res = ast_rtp_instance_set_write_format(p->rtp, (struct ast_format *) data);
 		}
+                if (p->rtp2) {
+                        res = ast_rtp_instance_set_write_format(p->rtp2, (struct ast_format *) data);
+                }
 		break;
 	case AST_OPTION_MAKE_COMPATIBLE:
 		if (p->rtp) {
 			res = ast_rtp_instance_make_compatible(chan, p->rtp, (struct ast_channel *) data);
 		}
+                if (p->rtp2) {
+                        res = ast_rtp_instance_make_compatible(chan, p->rtp2, (struct ast_channel *) data);
+                }
 		break;
 	case AST_OPTION_DIGIT_DETECT:
 		if ((ast_test_flag(&p->flags[0], SIP_DTMF) == SIP_DTMF_INBAND) ||
@@ -7089,6 +7098,12 @@ static int sip_hangup(struct ast_channel *ast)
 					}
 					pbx_builtin_setvar_helper(oldowner, "RTPAUDIOQOS", quality);
 				}
+                                if (p->rtp2 && (quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY, quality_buf, sizeof(quality_buf)))) {
+                                        if (p->do_history) {
+                                                append_history(p, "RTCPaudio", "Quality:%s", quality);
+                                        }
+                                        pbx_builtin_setvar_helper(oldowner, "RTPAUDIOQOS", quality);
+                                }
 				if (p->vrtp && (quality = ast_rtp_instance_get_quality(p->vrtp, AST_RTP_INSTANCE_STAT_FIELD_QUALITY, quality_buf, sizeof(quality_buf)))) {
 					if (p->do_history) {
 						append_history(p, "RTCPvideo", "Quality:%s", quality);
@@ -7191,7 +7206,7 @@ static int sip_answer(struct ast_channel *ast)
 		ast_rtp_instance_update_source(p->rtp2);
 		res = transmit_response_with_sdp(p, "200 OK", &p->initreq, XMIT_CRITICAL, oldsdp, TRUE);
 		ast_set_flag(&p->flags[1], SIP_PAGE2_DIALOG_ESTABLISHED);
-		/* DBR: ast_poll listens on fdno 6 for rtp2 and fdno 7 for corresponding rtcp */
+		/* DUB: ast_poll listens on fdno 6 for rtp2 and fdno 7 for corresponding rtcp */
 		ast_channel_set_fd(p->owner, 6, ast_rtp_instance_fd(p->rtp2, 0));
 		ast_channel_set_fd(p->owner, 7, ast_rtp_instance_fd(p->rtp2, 1));
 		/* RFC says the session timer starts counting on 200,
@@ -7241,7 +7256,21 @@ static int sip_write(struct ast_channel *ast, struct ast_frame *frame)
 				}
 				p->lastrtptx = time(NULL);
 				res = ast_rtp_instance_write(p->rtp, frame);
-			}
+			} else if (p->rtp2) {
+                                /* If channel is not up, activate early media session */
+                                if ((ast_channel_state(ast) != AST_STATE_UP) &&
+                                    !ast_test_flag(&p->flags[0], SIP_PROGRESS_SENT) &&
+                                    !ast_test_flag(&p->flags[0], SIP_OUTGOING)) {
+                                        ast_rtp_instance_update_source(p->rtp2);
+                                        if (!global_prematuremediafilter) {
+                                                p->invitestate = INV_EARLY_MEDIA;
+                                                transmit_provisional_response(p, "183 Session Progress", &p->initreq, TRUE);
+                                                ast_set_flag(&p->flags[0], SIP_PROGRESS_SENT);
+                                        }
+                                }
+                                p->lastrtptx = time(NULL);
+                                res = ast_rtp_instance_write(p->rtp2, frame);
+                        }
 			sip_pvt_unlock(p);
 		}
 		break;
@@ -13731,16 +13760,19 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 						add_content(resp, ast_str_buffer(m_audio));
 						add_content(resp, ast_str_buffer(a_audio));
 						i=1;
+						if (a_crypto) {
+                                         	       add_content(resp, a_crypto);
+                                        	}
 					}
 					else {
 						add_content(resp, ast_str_buffer(m_audio2));
 						add_content(resp, ast_str_buffer(a_audio2));
+						if (a_crypto2) {
+                                         	       add_content(resp, a_crypto2);
+                                        	}
 					}
 					
 					add_content(resp, hold);
-					if (a_crypto) {
-						add_content(resp, a_crypto);
-					}
 				} else {
 					add_content(resp, offer->decline_m_line);
 				}
