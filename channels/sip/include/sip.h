@@ -1158,6 +1158,7 @@ struct sip_pvt {
 	struct sip_auth_container *peerauth;/*!< Realm authentication credentials */
 	int noncecount;                     /*!< Nonce-count */
 	unsigned int stalenonce:1;          /*!< Marks the current nonce as responded too */
+	unsigned int late_sdp_negotiation:1;/*!< Got Late SDP Negotiation 0=False,1=True */
 	unsigned int ongoing_reinvite:1;    /*!< There is a reinvite in progress that might need to be cleaned up */
 	char lastmsg[256];                  /*!< Last Message sent/received */
 	int amaflags;                       /*!< AMA Flags */
@@ -1204,6 +1205,7 @@ struct sip_pvt {
 	struct sip_invite_param *options;   /*!< Options for INVITE */
 	struct sip_st_dlg *stimer;          /*!< SIP Session-Timers */
 	struct sip_srtp *srtp;              /*!< Structure to hold Secure RTP session data for audio */
+	struct sip_srtp *srtp2;             /*!< DUB - Structure to hold Secure RTP session data for audio */
 	struct sip_srtp *vsrtp;             /*!< Structure to hold Secure RTP session data for video */
 	struct sip_srtp *tsrtp;             /*!< Structure to hold Secure RTP session data for text */
 

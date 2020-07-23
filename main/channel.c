@@ -1233,8 +1233,8 @@ struct ast_channel *ast_dummy_channel_alloc(void)
 
 static int __ast_queue_frame(struct ast_channel *chan, struct ast_frame *fin, int head, struct ast_frame *after)
 {
-	struct ast_frame *f;
-	struct ast_frame *cur;
+	struct ast_frame *f = NULL;
+	struct ast_frame *cur = NULL;
 	unsigned int new_frames = 0;
 	unsigned int new_voice_frames = 0;
 	unsigned int queued_frames = 0;
@@ -2672,7 +2672,6 @@ int ast_softhangup_nolock(struct ast_channel *chan, int cause)
 int ast_softhangup(struct ast_channel *chan, int cause)
 {
 	int res;
-
 	ast_channel_lock(chan);
 	res = ast_softhangup_nolock(chan, cause);
 	/*** DOCUMENTATION

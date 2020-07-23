@@ -4717,16 +4717,25 @@ static int sip_setoption(struct ast_channel *chan, int option, void *data, int d
 		if (p->rtp) {
 			res = ast_rtp_instance_set_read_format(p->rtp, (struct ast_format *) data);
 		}
+                if (p->rtp2) {
+                        res = ast_rtp_instance_set_read_format(p->rtp2, (struct ast_format *) data);
+                }
 		break;
 	case AST_OPTION_FORMAT_WRITE:
 		if (p->rtp) {
 			res = ast_rtp_instance_set_write_format(p->rtp, (struct ast_format *) data);
 		}
+                if (p->rtp2) {
+                        res = ast_rtp_instance_set_write_format(p->rtp2, (struct ast_format *) data);
+                }
 		break;
 	case AST_OPTION_MAKE_COMPATIBLE:
 		if (p->rtp) {
 			res = ast_rtp_instance_make_compatible(chan, p->rtp, (struct ast_channel *) data);
 		}
+                if (p->rtp2) {
+                        res = ast_rtp_instance_make_compatible(chan, p->rtp2, (struct ast_channel *) data);
+                }
 		break;
 	case AST_OPTION_DIGIT_DETECT:
 		if ((ast_test_flag(&p->flags[0], SIP_DTMF) == SIP_DTMF_INBAND) ||
@@ -5594,7 +5603,7 @@ static void do_setnat(struct sip_pvt *p)
 	}
 /* We set NAT to p->rtp2 */
         if (p->rtp2) {
-                ast_debug(1, "Setting NAT2 on RTP to %s\n", mode);
+                ast_debug(1, "Setting NAT on RTP2 to %s\n", mode);
                 ast_rtp_instance_set_prop(p->rtp2, AST_RTP_PROPERTY_NAT, natflags);
         }
 	if (p->vrtp) {
@@ -5763,6 +5772,10 @@ static int dialog_initialize_rtp(struct sip_pvt *dialog)
 
 	if (!ast_test_flag(&dialog->flags[2], SIP_PAGE3_ICE_SUPPORT) && (ice = ast_rtp_instance_get_ice(dialog->rtp2))) {
 		ice->stop(dialog->rtp2);
+	}
+
+	if (dialog_initialize_dtls_srtp(dialog, dialog->rtp2, &dialog->srtp2)) {
+		return -1;
 	}
 
 	if (ast_test_flag(&dialog->flags[1], SIP_PAGE2_VIDEOSUPPORT_ALWAYS) ||
@@ -6212,6 +6225,11 @@ static int sip_call(struct ast_channel *ast, const char *dest, int timeout)
 			return -1;
 		}
 
+		if (p->rtp2 && !p->srtp2 && setup_srtp(&p->srtp2) < 0) {
+			ast_log(LOG_WARNING, "SRTP audio setup failed\n");
+			return -1;
+		}
+
 		if (p->vrtp && !p->vsrtp && setup_srtp(&p->vsrtp) < 0) {
 			ast_log(LOG_WARNING, "SRTP video setup failed\n");
 			return -1;
@@ -6486,6 +6504,11 @@ void __sip_destroy(struct sip_pvt *p, int lockowner, int lockdialoglist)
 	if (p->srtp) {
 		sip_srtp_destroy(p->srtp);
 		p->srtp = NULL;
+	}
+
+	if (p->srtp2) {
+		sip_srtp_destroy(p->srtp2);
+		p->srtp2 = NULL;
 	}
 
 	if (p->vsrtp) {
@@ -7075,6 +7098,12 @@ static int sip_hangup(struct ast_channel *ast)
 					}
 					pbx_builtin_setvar_helper(oldowner, "RTPAUDIOQOS", quality);
 				}
+                                if (p->rtp2 && (quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY, quality_buf, sizeof(quality_buf)))) {
+                                        if (p->do_history) {
+                                                append_history(p, "RTCPaudio", "Quality:%s", quality);
+                                        }
+                                        pbx_builtin_setvar_helper(oldowner, "RTPAUDIOQOS", quality);
+                                }
 				if (p->vrtp && (quality = ast_rtp_instance_get_quality(p->vrtp, AST_RTP_INSTANCE_STAT_FIELD_QUALITY, quality_buf, sizeof(quality_buf)))) {
 					if (p->do_history) {
 						append_history(p, "RTCPvideo", "Quality:%s", quality);
@@ -7177,7 +7206,7 @@ static int sip_answer(struct ast_channel *ast)
 		ast_rtp_instance_update_source(p->rtp2);
 		res = transmit_response_with_sdp(p, "200 OK", &p->initreq, XMIT_CRITICAL, oldsdp, TRUE);
 		ast_set_flag(&p->flags[1], SIP_PAGE2_DIALOG_ESTABLISHED);
-		/* DBR: ast_poll listens on fdno 6 for rtp2 and fdno 7 for corresponding rtcp */
+		/* DUB: ast_poll listens on fdno 6 for rtp2 and fdno 7 for corresponding rtcp */
 		ast_channel_set_fd(p->owner, 6, ast_rtp_instance_fd(p->rtp2, 0));
 		ast_channel_set_fd(p->owner, 7, ast_rtp_instance_fd(p->rtp2, 1));
 		/* RFC says the session timer starts counting on 200,
@@ -7227,7 +7256,21 @@ static int sip_write(struct ast_channel *ast, struct ast_frame *frame)
 				}
 				p->lastrtptx = time(NULL);
 				res = ast_rtp_instance_write(p->rtp, frame);
-			}
+			} else if (p->rtp2) {
+                                /* If channel is not up, activate early media session */
+                                if ((ast_channel_state(ast) != AST_STATE_UP) &&
+                                    !ast_test_flag(&p->flags[0], SIP_PROGRESS_SENT) &&
+                                    !ast_test_flag(&p->flags[0], SIP_OUTGOING)) {
+                                        ast_rtp_instance_update_source(p->rtp2);
+                                        if (!global_prematuremediafilter) {
+                                                p->invitestate = INV_EARLY_MEDIA;
+                                                transmit_provisional_response(p, "183 Session Progress", &p->initreq, TRUE);
+                                                ast_set_flag(&p->flags[0], SIP_PROGRESS_SENT);
+                                        }
+                                }
+                                p->lastrtptx = time(NULL);
+                                res = ast_rtp_instance_write(p->rtp2, frame);
+                        }
 			sip_pvt_unlock(p);
 		}
 		break;
@@ -7800,14 +7843,14 @@ static int sip_indicate(struct ast_channel *ast, int condition, const void *data
  */
 static struct ast_channel *sip_new(struct sip_pvt *i, int state, const char *title, const char *linkedid, struct ast_callid *callid)
 {
-	struct ast_channel *tmp;
+	struct ast_channel *tmp = NULL;
 	struct ast_variable *v = NULL;
 	struct ast_format fmt;
 	struct ast_format_cap *what = NULL; /* SHALLOW COPY DO NOT DESTROY! */
 	int needvideo = 0;
 	int needtext = 0;
-	char buf[SIPBUFSIZE];
-	char *exten;
+	char buf[SIPBUFSIZE]="\0";
+	char *exten = NULL;
 
 	{
 		const char *my_name;	/* pick a good name */
@@ -7913,6 +7956,12 @@ static struct ast_channel *sip_new(struct sip_pvt *i, int state, const char *tit
 		ast_rtp_instance_set_write_format(i->rtp, &fmt);
 		ast_rtp_instance_set_read_format(i->rtp, &fmt);
 	}
+        if (i->rtp2) {
+                ast_channel_set_fd(tmp, 6, ast_rtp_instance_fd(i->rtp2, 0));
+                ast_channel_set_fd(tmp, 7, ast_rtp_instance_fd(i->rtp2, 1));
+                ast_rtp_instance_set_write_format(i->rtp2, &fmt);
+                ast_rtp_instance_set_read_format(i->rtp2, &fmt);
+        }
 	if (needvideo && i->vrtp) {
 		ast_channel_set_fd(tmp, 2, ast_rtp_instance_fd(i->vrtp, 0));
 		ast_channel_set_fd(tmp, 3, ast_rtp_instance_fd(i->vrtp, 1));
@@ -8009,6 +8058,10 @@ static struct ast_channel *sip_new(struct sip_pvt *i, int state, const char *tit
 	if (i->rtp) {
 		ast_jb_configure(tmp, &global_jbconf);
 	}
+
+        if (i->rtp2) {
+                ast_jb_configure(tmp, &global_jbconf);
+        }
 
 	if (!i->relatedpeer) {
 		ast_set_flag(ast_channel_flags(tmp), AST_FLAG_DISABLE_DEVSTATE_CACHE);
@@ -9999,9 +10052,17 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 				processed = TRUE;
 			}
 			if (process_sdp_a_dtls(value, p, p->rtp)) {
+				ast_log(LOG_NOTICE, "process_sdp_a_dtls Stream %d", maudioLines);
 				processed = TRUE;
 				if (p->srtp) {
 					ast_set_flag(p->srtp, SRTP_CRYPTO_OFFER_OK);
+				}
+			}
+			if (process_sdp_a_dtls(value, p, p->rtp2)) {
+				ast_log(LOG_NOTICE, "process_sdp_a_dtls Stream %d", maudioLines);
+				processed = TRUE;
+				if (p->srtp2) {
+					ast_set_flag(p->srtp2, SRTP_CRYPTO_OFFER_OK);
 				}
 			}
 		        if (process_sdp_a_dtls(value, p, p->vrtp)) {
@@ -10111,6 +10172,10 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 
 					if (p->srtp) {
 						ast_set_flag(p->srtp, SRTP_CRYPTO_OFFER_OK);
+					}
+
+					if (p->srtp2) {
+						ast_set_flag(p->srtp2, SRTP_CRYPTO_OFFER_OK);
 					}
 				} else if (!strcmp(protocol, "RTP/SAVP") || !strcmp(protocol, "RTP/SAVPF")) {
 					secure_audio = 1;
@@ -10430,14 +10495,23 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 						if (p->srtp) {
 							ast_set_flag(p->srtp, SRTP_CRYPTO_OFFER_OK);
 						}
+						if (p->srtp2) {
+							ast_set_flag(p->srtp2, SRTP_CRYPTO_OFFER_OK);
+						}
 					} else if (process_sdp_a_sendonly(value, &sendonly)) {
 						processed = TRUE;
-					} else if (!processed_crypto && process_crypto(p, p->rtp, &p->srtp, value)) {
+					} else if (!processed_crypto && maudioLines == 0 && process_crypto(p, p->rtp, &p->srtp, value)) {
+						/*! DUB - Stream 1 */
 						processed_crypto = TRUE;
 						processed = TRUE;
-					} else if (process_sdp_a_audio(value, p, &newaudiortp[maudioLines], &last_rtpmap_codec)) {
+					} else if (!processed_crypto && maudioLines == 1 && process_crypto(p, p->rtp2, &p->srtp2, value)) {
+						/*! DUB - Stream 2 */
+                                                processed_crypto = TRUE;
+                                                processed = TRUE;
+                                        } else if (process_sdp_a_audio(value, p, &newaudiortp[maudioLines], &last_rtpmap_codec)) {
 						processed = TRUE;
-					} else if (process_sdp_a_label(value, p, maudioLines)) { /*! DUB - Process the label attribute */
+					} else if (process_sdp_a_label(value, p, maudioLines)) {
+						/*! DUB - Process the label attribute */
 						processed = TRUE;
 					}
 				}
@@ -10525,13 +10599,31 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 		p->srtp = NULL;
         }
 
+	if (p->srtp2 && p->udptl && udptlportno != -1) {
+		ast_debug(1, "Terminating SRTP due to T.38 UDPTL\n");
+		sip_srtp_destroy(p->srtp2);
+		p->srtp2 = NULL;
+	}
+
 	if (secure_audio && !(p->srtp && (ast_test_flag(p->srtp, SRTP_CRYPTO_OFFER_OK)))) {
 		ast_log(LOG_WARNING, "Can't provide secure audio requested in SDP offer\n");
 		res = -1;
 		goto process_sdp_cleanup;
 	}
 
+	if (secure_audio && !(p->srtp2 && (ast_test_flag(p->srtp2, SRTP_CRYPTO_OFFER_OK)))) {
+		ast_log(LOG_WARNING, "Can't provide secure audio requested in SDP offer\n");
+		res = -1;
+		goto process_sdp_cleanup;
+	}
+
 	if (!secure_audio && p->srtp) {
+		ast_log(LOG_WARNING, "Failed to receive SDP offer/answer with required SRTP crypto attributes for audio\n");
+		res = -1;
+		goto process_sdp_cleanup;
+	}
+
+	if (!secure_audio && p->srtp2) {
 		ast_log(LOG_WARNING, "Failed to receive SDP offer/answer with required SRTP crypto attributes for audio\n");
 		res = -1;
 		goto process_sdp_cleanup;
@@ -11070,7 +11162,7 @@ static int process_sdp_a_label(const char *a, struct sip_pvt *p, int stream_no)
 		char *s_label = strtok(a_string, ":");
 		char *s_value = strtok(NULL, ":");
 
-		ast_debug(3,"%s: %s", s_label, s_value);
+		ast_debug(3,"%s: %s\n", s_label, s_value);
 
 		if (stream_no == 0)
 			ast_rtp_instance_set_stream_label(p->rtp, atol(s_value));
@@ -13264,6 +13356,7 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 	struct ast_str *a_text = ast_str_create(256);   /* Attributes for text */
 	struct ast_str *a_modem = ast_str_alloca(1024); /* Attributes for modem */
 	const char *a_crypto = NULL;
+	const char *a_crypto2 = NULL;    /*! DUB - a_crypto2 for 2nd stream */
 	const char *v_a_crypto = NULL;
 	const char *t_a_crypto = NULL;
 
@@ -13438,13 +13531,22 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 		/* We break with the "recommendation" and send our IP, in order that our
 		   peer doesn't have to ast_gethostbyname() us */
 
+		/* DUB handling srtp in case of late sdp negotiation */
+		if (ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_SRTP_CALL) &&
+		    p->late_sdp_negotiation == 1 && ast_rtp_engine_srtp_is_registered()) {
+			ast_debug(2,"Got late_sdp_negotiation and encryption=yes, fecthing crypto keys for offer\n");
+			setup_srtp(&p->srtp);
+			setup_srtp(&p->srtp2);
+		}
+
 		get_crypto_attrib(p, p->srtp, &a_crypto);
+		get_crypto_attrib(p, p->srtp2, &a_crypto2);
 
 		ast_str_append(&m_audio, 0, "m=audio %d %s", ast_sockaddr_port(&dest),
-			       get_sdp_rtp_profile(p, a_crypto ? 1 : 0, p->rtp));
+				get_sdp_rtp_profile(p, a_crypto ? 1 : 0, p->rtp));
 
 		ast_str_append(&m_audio2, 0, "m=audio %d %s", ast_sockaddr_port(&dest2),
-					get_sdp_rtp_profile(p, a_crypto ? 1 : 0, p->rtp2));
+				get_sdp_rtp_profile(p, a_crypto2 ? 1 : 0, p->rtp2));
 
 
 		/* Now, start adding audio codecs. These are added in this order:
@@ -13668,16 +13770,19 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 						add_content(resp, ast_str_buffer(m_audio));
 						add_content(resp, ast_str_buffer(a_audio));
 						i=1;
+						if (a_crypto) {
+                                         	       add_content(resp, a_crypto);
+                                        	}
 					}
 					else {
 						add_content(resp, ast_str_buffer(m_audio2));
 						add_content(resp, ast_str_buffer(a_audio2));
+						if (a_crypto2) {
+                                         	       add_content(resp, a_crypto2);
+                                        	}
 					}
 					
 					add_content(resp, hold);
-					if (a_crypto) {
-						add_content(resp, a_crypto);
-					}
 				} else {
 					add_content(resp, offer->decline_m_line);
 				}
@@ -13733,6 +13838,9 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 			add_content(resp, hold);
 			if (a_crypto) {
 				add_content(resp, a_crypto);
+			}
+			if (a_crypto2) {
+				add_content(resp, a_crypto2);
 			}
 		}
 		if (needvideo) { /* only if video response is appropriate */
@@ -26101,6 +26209,7 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 		}
 
 		req->authenticated = 1;
+		p->late_sdp_negotiation = 0;
 
 		/* We have a successful authentication, process the SDP portion if there is one */
 		if (find_sdp(req)) {
@@ -26124,6 +26233,8 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 		} else {	/* No SDP in invite, call control session */
 			ast_format_cap_copy(p->jointcaps, p->caps);
 			ast_debug(2, "No SDP in Invite, third party call control\n");
+			/* DUB setting the variable to be used in caseof encryption is yes */
+                        p->late_sdp_negotiation = 1;
 		}
 
 		/* Initialize the context if it hasn't been already */
@@ -26344,6 +26455,17 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 
 	/* Check if OLI/ANI-II is present in From: */
 	parse_oli(req, p->owner);
+
+	/*! DUB - Parse X-Srtp-Call header */
+	if (c) {
+		const char *val=NULL;
+		if (!ast_strlen_zero(val = sip_get_header(req, "X-Srtp-Call"))) {
+			ast_debug(2, "DUB X-Srtp-Call: %s\n", val);
+			if (!strcmp(val,"True") || !strcmp(val,"true")) {
+				ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_SRTP_CALL);
+			}
+		}
+	}
 
 	if (reinvite && p->stimer->st_active == TRUE) {
 		restart_session_timer(p);
@@ -27407,6 +27529,27 @@ static int handle_request_bye(struct sip_pvt *p, struct sip_request *req)
 			}
 
 		}
+
+                if (p->rtp2 && (quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY, quality_buf, sizeof(quality_buf)))) {
+                        if (p->do_history) {
+                                append_history(p, "RTCPaudio", "Quality:%s", quality);
+
+                                if ((quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY_JITTER, quality_buf, sizeof(quality_buf)))) {
+                                        append_history(p, "RTCPaudioJitter", "Quality:%s", quality);
+                                }
+                                if ((quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY_LOSS, quality_buf, sizeof(quality_buf)))) {
+                                        append_history(p, "RTCPaudioLoss", "Quality:%s", quality);
+                                }
+                                if ((quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY_RTT, quality_buf, sizeof(quality_buf)))) {
+                                        append_history(p, "RTCPaudioRTT", "Quality:%s", quality);
+                                }
+                        }
+
+                        if (p->owner) {
+                                ast_rtp_instance_set_stats_vars(p->owner, p->rtp2);
+                        }
+
+                }
 
 		if (bridge) {
 			struct sip_pvt *q = ast_channel_tech_pvt(bridge);

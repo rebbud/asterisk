@@ -2717,11 +2717,19 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					/* This is an interrupting chracter, so rewind to chop off any small
 					   amount of DTMF that may have been recorded
 					*/
-					ast_stream_rewind(fs, 200);
-					ast_truncstream(fs);
-					sample_offset = ast_tellstream(fs);
-					ast_agi_send(agi->fd, chan, "200 result=%d (dtmf) endpos=%ld\n", f->subclass.integer, sample_offset);
-					ast_closestream(fs);
+					if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
+						ast_stream_rewind(fs, 200);
+						ast_truncstream(fs);
+						sample_offset = ast_tellstream(fs);
+						ast_agi_send(agi->fd, chan, "200 result=%d (dtmf) endpos=%ld\n", f->subclass.integer, sample_offset);
+						ast_closestream(fs);
+					} else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
+						ast_stream_rewind(fs2, 200);
+                                                ast_truncstream(fs2);
+                                                sample_offset = ast_tellstream(fs2);
+                                                ast_agi_send(agi->fd, chan, "200 result=%d (dtmf) endpos=%ld\n", f->subclass.integer, sample_offset);
+                                                ast_closestream(fs2);
+					}
 					ast_frfree(f);
 					if (sildet)
 						ast_dsp_free(sildet);
@@ -2739,7 +2747,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
                                         	ast_debug(3, "Write Stream2\n");
                                         	add_silence(chan, f, fs2, 2);
                                         	ast_writestream(fs2, f);
-					}else {
+					} else {
 						ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
 					}
 				} else {
@@ -2757,7 +2765,14 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				/* this is a safe place to check progress since we know that fs
 				 * is valid after a write, and it will then have our current
 				 * location */
-				sample_offset = ast_tellstream(fs);
+				if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
+					sample_offset = ast_tellstream(fs);
+				} else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
+					sample_offset = ast_tellstream(fs2);
+				} else {
+                                        ast_log(LOG_ERROR,"INVALID RTP STREAM NO: Something not right!!!\n");
+                                }
+
 				if (silence > 0) {
 					dspsilence = 0;
 					ast_dsp_silence(sildet, f, &dspsilence);
@@ -3869,7 +3884,7 @@ static enum agi_result run_agi(struct ast_channel *chan, char *request, AGI *agi
 	const char *sighup_str;
 	const char *exit_on_hangup_str;
 	int exit_on_hangup;
-	
+		
 	ast_channel_lock(chan);
 	sighup_str = pbx_builtin_getvar_helper(chan, "AGISIGHUP");
 	send_sighup = !ast_false(sighup_str);
