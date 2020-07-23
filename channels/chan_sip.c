@@ -5603,7 +5603,7 @@ static void do_setnat(struct sip_pvt *p)
 	}
 /* We set NAT to p->rtp2 */
         if (p->rtp2) {
-                ast_debug(1, "Setting NAT2 on RTP to %s\n", mode);
+                ast_debug(1, "Setting NAT on RTP2 to %s\n", mode);
                 ast_rtp_instance_set_prop(p->rtp2, AST_RTP_PROPERTY_NAT, natflags);
         }
 	if (p->vrtp) {
@@ -7843,14 +7843,14 @@ static int sip_indicate(struct ast_channel *ast, int condition, const void *data
  */
 static struct ast_channel *sip_new(struct sip_pvt *i, int state, const char *title, const char *linkedid, struct ast_callid *callid)
 {
-	struct ast_channel *tmp;
+	struct ast_channel *tmp = NULL;
 	struct ast_variable *v = NULL;
 	struct ast_format fmt;
 	struct ast_format_cap *what = NULL; /* SHALLOW COPY DO NOT DESTROY! */
 	int needvideo = 0;
 	int needtext = 0;
-	char buf[SIPBUFSIZE];
-	char *exten;
+	char buf[SIPBUFSIZE]="\0";
+	char *exten = NULL;
 
 	{
 		const char *my_name;	/* pick a good name */
@@ -7956,6 +7956,12 @@ static struct ast_channel *sip_new(struct sip_pvt *i, int state, const char *tit
 		ast_rtp_instance_set_write_format(i->rtp, &fmt);
 		ast_rtp_instance_set_read_format(i->rtp, &fmt);
 	}
+        if (i->rtp2) {
+                ast_channel_set_fd(tmp, 6, ast_rtp_instance_fd(i->rtp2, 0));
+                ast_channel_set_fd(tmp, 7, ast_rtp_instance_fd(i->rtp2, 1));
+                ast_rtp_instance_set_write_format(i->rtp2, &fmt);
+                ast_rtp_instance_set_read_format(i->rtp2, &fmt);
+        }
 	if (needvideo && i->vrtp) {
 		ast_channel_set_fd(tmp, 2, ast_rtp_instance_fd(i->vrtp, 0));
 		ast_channel_set_fd(tmp, 3, ast_rtp_instance_fd(i->vrtp, 1));
@@ -8052,6 +8058,10 @@ static struct ast_channel *sip_new(struct sip_pvt *i, int state, const char *tit
 	if (i->rtp) {
 		ast_jb_configure(tmp, &global_jbconf);
 	}
+
+        if (i->rtp2) {
+                ast_jb_configure(tmp, &global_jbconf);
+        }
 
 	if (!i->relatedpeer) {
 		ast_set_flag(ast_channel_flags(tmp), AST_FLAG_DISABLE_DEVSTATE_CACHE);
@@ -27519,6 +27529,27 @@ static int handle_request_bye(struct sip_pvt *p, struct sip_request *req)
 			}
 
 		}
+
+                if (p->rtp2 && (quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY, quality_buf, sizeof(quality_buf)))) {
+                        if (p->do_history) {
+                                append_history(p, "RTCPaudio", "Quality:%s", quality);
+
+                                if ((quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY_JITTER, quality_buf, sizeof(quality_buf)))) {
+                                        append_history(p, "RTCPaudioJitter", "Quality:%s", quality);
+                                }
+                                if ((quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY_LOSS, quality_buf, sizeof(quality_buf)))) {
+                                        append_history(p, "RTCPaudioLoss", "Quality:%s", quality);
+                                }
+                                if ((quality = ast_rtp_instance_get_quality(p->rtp2, AST_RTP_INSTANCE_STAT_FIELD_QUALITY_RTT, quality_buf, sizeof(quality_buf)))) {
+                                        append_history(p, "RTCPaudioRTT", "Quality:%s", quality);
+                                }
+                        }
+
+                        if (p->owner) {
+                                ast_rtp_instance_set_stats_vars(p->owner, p->rtp2);
+                        }
+
+                }
 
 		if (bridge) {
 			struct sip_pvt *q = ast_channel_tech_pvt(bridge);
