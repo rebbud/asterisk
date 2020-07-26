@@ -357,7 +357,7 @@ int sdp_crypto_offer(struct sdp_crypto *p, int taglen)
 		return -1;
 	}
 
-	ast_debug(1, "Crypto line: %s\n", p->a_crypto);
+	ast_debug(1, "Crypto line: %s", p->a_crypto);
 
 	return 0;
 }

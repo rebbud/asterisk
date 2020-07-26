@@ -13830,18 +13830,18 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 		if (needaudio) {
 			add_content(resp, ast_str_buffer(m_audio));
 			add_content(resp, ast_str_buffer(a_audio));
+                        if (a_crypto) {
+                                add_content(resp, a_crypto);
+                        }
 			add_content(resp, hold);
 			/* BAU-640: When there is no change in SDP version number in reINVITE, 
 			* do not forget to add the 2nd m-line from the old SDP */
 			add_content(resp, ast_str_buffer(m_audio2));
 			add_content(resp, ast_str_buffer(a_audio2));
+                        if (a_crypto2) {
+                                add_content(resp, a_crypto2);
+                        }
 			add_content(resp, hold);
-			if (a_crypto) {
-				add_content(resp, a_crypto);
-			}
-			if (a_crypto2) {
-				add_content(resp, a_crypto2);
-			}
 		}
 		if (needvideo) { /* only if video response is appropriate */
 			add_content(resp, ast_str_buffer(m_video));
