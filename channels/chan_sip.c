@@ -20933,6 +20933,8 @@ static char *sip_show_settings(struct ast_cli_entry *e, int cmd, struct ast_cli_
 	ast_cli(a->fd, "  Max forwards:           %d\n", sip_cfg.default_max_forwards);
 	ast_cli(a->fd, "  Pause record:           %s\n", sip_cfg.dub_pauseRecord);
 	ast_cli(a->fd, "  Resume record:          %s\n", sip_cfg.dub_resumeRecord);
+        ast_cli(a->fd, "  Record Control:         %d\n", sip_cfg.dub_recordControl);//DUB: Recording Call Control
+        ast_cli(a->fd, "  Record Silent Pause:    %d\n", sip_cfg.dub_record_silent_pause);//DUB: Insert silence for the paused duration
 
 	ast_cli(a->fd, "\nDefault Settings:\n");
 	ast_cli(a->fd, "-----------------\n");
@@ -21523,60 +21525,6 @@ static void sip_dump_history(struct sip_pvt *dialog)
 		ast_debug(1, "Call '%s' has no history\n", dialog->callid);
 	}
 	ast_debug(1, "\n---------- END SIP HISTORY for '%s' \n", dialog->callid);
-}
-
-/*! \brief  compare the received pattern against the configured one */
-static void dub_channel_cmp_dtmf_pattern(struct sip_pvt *p)
-{
-	ast_debug(5, "DUB: strcmp xpause=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord));
-	ast_debug(5, "DUB: strcmp xresume=%d\n",strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_resumeRecord));
-
-	if (!strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_pauseRecord) && 
-		!ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-		/* DUB - Set flag to pause recording */
-		ast_set_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-		ast_debug(5, "DUB, compare %s and %s, set flag=%d\n", sip_cfg.dub_pauseRecord, p->dub_dtmf_store.pattern, 
-				ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
-		memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS); 
-	}
-	else if (!strcmp(p->dub_dtmf_store.pattern, sip_cfg.dub_resumeRecord) && 
-		ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-		/* DUB - Clear pause recording flag */
-		ast_clear_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
-		ast_debug(5, "DUB, compare %s and %s, cleared flag=%d\n", sip_cfg.dub_resumeRecord, p->dub_dtmf_store.pattern, 
-				ast_test_flag(ast_channel_flags(p->owner), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
-		memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS); 
-	}
-
-	return;
-}
-
-/*! \brief  build a pattern of DTMF digits - Maximum 3 */
-static void dub_channel_build_dtmf_pattern(struct sip_pvt *p, const char digit)
-{
-	/* Append the last received digit and check the stored timestamp.
-	 * if current time - stored > 3s, discard existing store and build fresh.
-	 * also clear the store when number of collected digits reaches maximum length.
-	 */ 
-	int duration = 0;
-
-	if (!strlen(sip_cfg.dub_pauseRecord) || !strlen(sip_cfg.dub_resumeRecord)) {
-		ast_log(LOG_WARNING, "pause_record/resume_record pattern not configured in sip.conf\n");
-		return;
-	}
-
-	duration = ast_tvdiff_sec(ast_tvnow(), p->dub_dtmf_store.last_received_digit_tv); 
-	if ((duration > 3) || 
-		(strlen(p->dub_dtmf_store.pattern)+1 == DUB_CMD_DIGITS)) {
-		/* clear existing pattern */
-		memset(p->dub_dtmf_store.pattern, 0, DUB_CMD_DIGITS); 
-	}
-	sprintf(p->dub_dtmf_store.pattern, "%s%c", p->dub_dtmf_store.pattern, digit);
-	p->dub_dtmf_store.last_received_digit_tv = ast_tvnow();
-
-	dub_channel_cmp_dtmf_pattern(p);
-
-	return;
 }
 
 /*! \brief  Receive SIP INFO Message */
@@ -26018,6 +25966,46 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
 				ast_channel_set_redirecting(c, &redirecting, &update_redirecting);
 				ast_party_redirecting_free(&redirecting);
 			}
+
+			if (c) {
+                                const char *val=NULL;
+                                char *stream_label=NULL;
+
+                                /* DUB - Set the Pause/Resume DTMF Sequence in Channel */
+                                ast_channel_set_pause_seq(c, sip_cfg.dub_pauseRecord);
+                                ast_channel_set_resume_seq(c, sip_cfg.dub_resumeRecord);
+                                ast_channel_set_pause_resume_events(c);
+
+                                /*! DUB - Enable call recording control */
+                                if (sip_cfg.dub_recordControl == TRUE) {
+                                        ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
+                                        ast_log(LOG_NOTICE, "DUB - Record Control is enabled !!!\n");
+
+                                        /* DUB - Set the control stream label */
+                                        if(!ast_strlen_zero(val = sip_get_header(req, "X-Dubber-Call-Control"))) {
+                                                ast_log(LOG_NOTICE, "X-Dubber-Call-Control: %s\n", val);
+                                                stream_label = strdup(val);
+                                                ast_channel_set_stream_label(c, stream_label);
+                                                free(stream_label);
+                                        }else {
+                                                ast_log(LOG_WARNING, "DUB - X-Dubber-Call-Control not set, default settings applied !!!\n");
+                                                ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
+                                        }
+                                } else {
+                                        ast_log(LOG_WARNING, "DUB - Record Control is disabled !!!\n");
+                                        ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORDING_CONTROL);
+                                }
+
+                                /*! DUB - Silence the pause */
+                                if (sip_cfg.dub_record_silent_pause == TRUE) {
+                                        ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORD_SILENT_PAUSE);
+                                        ast_log(LOG_NOTICE, "DUB - Record silent pause is enabled !!!\n");
+                                } else {
+                                        ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORD_SILENT_PAUSE);
+                                        ast_log(LOG_NOTICE, "DUB - Record silent pause is disabled !!!\n");
+                                }
+                        }
+
 		}
 	} else {
 		ast_party_redirecting_init(&redirecting);
@@ -31918,6 +31906,7 @@ static int reload_config(enum channelreloadreason reason)
 	sip_cfg.default_max_forwards = DEFAULT_MAX_FORWARDS;
 	memset(sip_cfg.dub_pauseRecord, 0, DUB_CMD_DIGITS);
 	memset(sip_cfg.dub_resumeRecord, 0, DUB_CMD_DIGITS);
+	sip_cfg.dub_recordControl = FALSE;
 	default_language[0] = '\0';
 	default_fromdomain[0] = '\0';
 	default_fromdomainport = 0;
@@ -32524,7 +32513,7 @@ static int reload_config(enum channelreloadreason reason)
 			if (slen) {
 				if (slen < DUB_CMD_DIGITS) {
 					strncpy(sip_cfg.dub_pauseRecord, v->value, DUB_CMD_DIGITS-1);
-					ast_debug(5, "Setting pause_record=%s\n", sip_cfg.dub_pauseRecord);
+					ast_log(LOG_NOTICE, "Setting pause_record=%s\n", sip_cfg.dub_pauseRecord);
 				} else {
 					ast_log(LOG_WARNING, "pause_record=%s exceeds maximum digits(%d)\n", v->value, DUB_CMD_DIGITS-1);
 				}
@@ -32534,12 +32523,22 @@ static int reload_config(enum channelreloadreason reason)
 			if (slen) {
 				if (slen < DUB_CMD_DIGITS) {
 					strncpy(sip_cfg.dub_resumeRecord, v->value, DUB_CMD_DIGITS-1);
-					ast_debug(5, "Setting resume_record=%s\n", sip_cfg.dub_resumeRecord);
+					ast_log(LOG_NOTICE, "Setting resume_record=%s\n", sip_cfg.dub_resumeRecord);
 				} else {
 					ast_log(LOG_WARNING, "resume_record=%s exceeds maximum digits(%d)\n", v->value, DUB_CMD_DIGITS-1);
 				}
 			}
-		}
+		} else if (!strcasecmp(v->name, "record_control")) {
+                        if (!ast_false(v->value)) {
+                                ast_log(LOG_NOTICE, "DUB - Enabling Recording Call Control\n");
+                                sip_cfg.dub_recordControl = TRUE;
+                        }
+                } else if (!strcasecmp(v->name, "record_silent_pause")) {
+                        if (!ast_false(v->value)) {
+                                ast_log(LOG_NOTICE, "DUB - Enabling Record Silent Pause Control\n");
+                                sip_cfg.dub_record_silent_pause = TRUE;
+                        }
+                }
 	}
 
 	/* Override global defaults if setting found in general section */
