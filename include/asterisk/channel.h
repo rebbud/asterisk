@@ -4011,6 +4011,7 @@ char * ast_channel_get_pause_resume_events(struct ast_channel *chan);
 void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event);
 char *replace_str(char *str, char *orig, char *rep);
 
+void ast_channel_set_last_rec_time(struct ast_channel *chan);
 struct timeval ast_channel_get_last_rec_time(struct ast_channel *chan);
 void ast_channel_get_last_set_time(struct ast_channel *chan);
 

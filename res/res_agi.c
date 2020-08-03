@@ -2302,6 +2302,62 @@ static int handle_setpriority(struct ast_channel *chan, AGI *agi, int argc, cons
 	ast_agi_send(agi->fd, chan, "200 result=0\n");
 	return RESULT_SUCCESS;
 }
+
+/*! DUB - Compare the received dtmf pattern against the configured one */
+static void dub_channel_cmp_dtmf_pattern(struct ast_channel *chan)
+{
+        if (!ast_channel_cmp_pause_recording(chan) &&
+            !ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+                /* DUB - Set flag to pause recording */
+                ast_set_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
+                ast_log(LOG_NOTICE, "DUB - Set flag=%d and paused the recording !!!\n", ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+                ast_channel_reset_user_dtmf(chan);
+                ast_channel_update_pause_resume_events(chan, PAUSE_EVENT);
+        } else if (!ast_channel_cmp_resume_recording(chan)  &&
+                  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+                /* DUB - Clear pause recording flag */
+                ast_clear_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
+                ast_log(LOG_NOTICE, "DUB - Cleared flag=%d and recording has resumed !!!\n", ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+                ast_channel_reset_user_dtmf(chan);
+                ast_channel_update_pause_resume_events(chan, RESUME_EVENT);
+        }
+
+        return;
+}
+
+/*! DUB - brief  build a pattern of DTMF digits - Maximum 3 */
+static void dub_channel_build_dtmf_pattern(struct ast_channel *chan, struct ast_frame *f)
+{
+        /* Append the last received digit and check the stored timestamp.
+         * if current time - stored > 3s, discard existing store and build fresh.
+         * also clear the store when number of collected digits reaches maximum length. */
+
+        int duration = 0;
+        char *pause = ast_channel_get_pause_seq(chan);
+        char *resume = ast_channel_get_resume_seq(chan);
+
+        if ((pause != NULL) && (resume != NULL)) {
+                if (!strlen(pause) || !strlen(resume)) {
+                        ast_log(LOG_WARNING, "pause_record/resume_record pattern not configured in sip.conf\n");
+                        return;
+                }
+        } else {
+                ast_log(LOG_ERROR, "pause_record/resume_record pattern is NULL\n");
+                return;
+        }
+
+        duration = ast_tvdiff_sec(ast_tvnow(), ast_channel_get_last_received_digit_tv(chan));
+
+        if ((duration > 3) || (strlen(ast_channel_get_user_dtmf(chan))+1 == DUB_CMD_DIGITS)) {
+                ast_channel_reset_user_dtmf(chan); // clear existing pattern
+        }
+
+        ast_channel_set_user_dtmf(chan, (char) f->subclass.integer);
+        ast_channel_set_last_received_digit_tv(chan);
+        dub_channel_cmp_dtmf_pattern(chan);
+        return;
+}
+
 /* DUB inserting silence */
 static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, long int ts_start, long int f_ptime, long int gap_ms)
 {
@@ -2395,6 +2451,26 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
     ast_channel_set_last_rec_time(chan);
     return 0;
 }
+
+/*! DUB - Add silence silence packet to the Recording file */
+static int add_single_silence_packet(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs)
+{
+    long int f_no=0, f_ptime=0;
+
+    /*! ptime for the stream */
+    f_ptime=ast_channel_get_ptime(chan, stream_no);
+    if(f_ptime < 5)
+        f_ptime=20;
+
+    f_no = ast_channel_get_last_ts(chan, stream_no)+f_ptime;
+    insert_silence(chan, f, fs, stream_no, f_no, f_ptime, f_ptime+f_no, themssrc);
+
+    /*! Save the ts and sequence number for the next check */
+    ast_channel_set_last_ts(chan, f->ts);
+    ast_channel_set_last_seq(chan, f->seqno);
+    ast_channel_set_rec_end_ts(chan);
+    return 0;
+}  
 
 static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const char * const argv[])
 {
@@ -2510,8 +2586,12 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			}
 			switch(f->frametype) {
 			case AST_FRAME_DTMF:
-				ast_debug(5, "DUB: no processing for DTMF digit=%d, flag=%d \n", f->subclass.integer,
+				ast_debug(3, "DUB: Processing DTMF digit=%c, flag=%d \n", f->subclass.integer, 
 					ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+
+				/*! DUB - Verify dtmf */
+				dub_channel_build_dtmf_pattern(chan, f);
+
 				if (strchr(argv[4], f->subclass.integer)) {
 					/* This is an interrupting chracter, so rewind to chop off any small
 					   amount of DTMF that may have been recorded
@@ -2529,31 +2609,36 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				break;
 			case AST_FRAME_VOICE:
 				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-					ast_debug(5, "DUB, recording\n");
+					ast_debug(3, "Write Stream\n");
 					add_silence(chan, f, fs);
 					ast_writestream(fs, f);
-				        
+                                } 
+
+				if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
+					add_single_silence_packet(chan, f, fs);
+                                }
+				
+				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING) || 
+				     ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
 					/* this is a safe place to check progress since we know that fs
-					 * is valid after a write, and it will then have our current
-					 * location */
-					sample_offset = ast_tellstream(fs);
-					if (silence > 0) {
-						dspsilence = 0;
-						ast_dsp_silence(sildet, f, &dspsilence);
-						if (dspsilence) {
-							totalsilence = dspsilence;
-						} else {
-							totalsilence = 0;
-						}
-						if (totalsilence > silence) {
-							/* Ended happily with silence */
-							gotsilence = 1;
-							break;
-						}
-					}
+                                         * is valid after a write, and it will then have our current
+                                         * location */
+                                        sample_offset = ast_tellstream(fs);
+                                        if (silence > 0) {
+                                                dspsilence = 0;
+                                                ast_dsp_silence(sildet, f, &dspsilence);
+                                                if (dspsilence) {
+                                                        totalsilence = dspsilence;
+                                                } else {
+                                                        totalsilence = 0;
+                                                }
+                                                if (totalsilence > silence) {
+                                                        /* Ended happily with silence */
+                                                        gotsilence = 1;
+                                                        break;
+                                                }
+                                        }
 				}
-				else 
-					ast_debug(5, "DUB, recording paused\n");
 
 				break;
 			case AST_FRAME_VIDEO:
