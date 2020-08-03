@@ -9642,7 +9642,8 @@ static int find_sdp(struct sip_request *req)
 			}
 			found_application_sdp = FALSE;
 		}
-		if (!strcasecmp(line, "Content-Type: application/sdp"))
+		/* DUB avoiding strict check */
+		if (!strcasecmp(line, "Content-Type: application/sdp") || !strcasecmp(line, "Content-Type:application/sdp"))
 			found_application_sdp = TRUE;
 		
 		if (ast_strlen_zero(line)) {
