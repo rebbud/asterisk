@@ -3986,9 +3986,6 @@ void ast_channel_set_last_seq(struct ast_channel *chan, long int seq);
 long int ast_channel_get_ptime(const struct ast_channel *chan);
 void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime);
 
-void ast_channel_set_last_ssrc(struct ast_channel *chan, unsigned int themssrc);
-unsigned int  ast_channel_get_last_ssrc(struct ast_channel *chan);
-
 void ast_channel_set_pause_seq(struct ast_channel *chan, char *dub_pauseRecord);
 char * ast_channel_get_pause_seq(struct ast_channel *chan);
 

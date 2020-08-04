@@ -2412,10 +2412,11 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
 		j++;
 	}
     	
-	if (j > 1)
+	if (j > 1){
 		ast_log(LOG_WARNING, " %d EXTRA FRAME WRITTEN !!!\n",j);
+		ast_channel_set_extra_pkt_count(chan, j);
+	}
 
-	ast_channel_set_extra_pkt_count(chan, j);
 	ast_frfree(duped_frame); /* free the duped_frame frame */
 	return 0;
 }	
@@ -2617,12 +2618,14 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				break;
 			case AST_FRAME_VOICE:
 				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+					
 					add_silence(chan, f, fs);
 					ast_writestream(fs, f);
-				} 
-
-				if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
-					add_single_silence_packet(chan, f, fs);
+				} else {
+					if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
+						ast_log(LOG_WARNING, "I am going to write a single silent packet");
+						add_single_silence_packet(chan, f, fs);
+					}
 				}
 				
 				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING) || 
