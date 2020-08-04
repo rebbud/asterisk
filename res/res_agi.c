@@ -2405,7 +2405,7 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
 		duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
 		duped_frame->delivery.tv_usec %= 1000000;
 
-		ast_debug(1, "EXTRA FRAME - seqno: %d\t delivery_ts: %ld.%06ld\t ts: %ld\n", duped_frame->seqno,
+		ast_debug(9, "EXTRA FRAME - seqno: %d\t delivery_ts: %ld.%06ld\t ts: %ld\n", duped_frame->seqno,
 			duped_frame->delivery.tv_sec, duped_frame->delivery.tv_usec, duped_frame->ts);
 
 		ast_writestream(fs, duped_frame);
@@ -2414,7 +2414,8 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
     	
 	if (j > 1)
 		ast_log(LOG_WARNING, " %d EXTRA FRAME WRITTEN !!!\n",j);
-   	
+
+	ast_channel_set_extra_pkt_count(chan, j);
 	ast_frfree(duped_frame); /* free the duped_frame frame */
 	return 0;
 }	
@@ -2427,10 +2428,11 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 	long int f_ptime    = 0;
 	int64_t gap_ms      = 0;
 	struct timeval s_tv = ast_channel_get_last_rec_time(chan);
-   
+
 	if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
 		ast_log(LOG_NOTICE, "Setting the Record Start time \n" );
-	}else{
+		ast_channel_set_rec_start_time(chan);
+	} else {
 		f_ptime = ast_channel_get_ptime(chan);
 		if(f_ptime < 5)
 			f_ptime=20;
@@ -2449,6 +2451,11 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 		}
 	}
 
+	/*! Save the ts and sequence number for the next check */
+	ast_channel_set_pkt_count(chan);
+	ast_channel_set_last_ts(chan, f->ts);
+	ast_channel_set_last_seq(chan, f->seqno);
+	ast_channel_set_rec_end_ts(chan);
 	ast_channel_set_last_rec_time(chan);
 	return 0;
 }
