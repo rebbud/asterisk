@@ -20933,7 +20933,7 @@ static char *sip_show_settings(struct ast_cli_entry *e, int cmd, struct ast_cli_
 	ast_cli(a->fd, "  Max forwards:           %d\n", sip_cfg.default_max_forwards);
 	ast_cli(a->fd, "  Pause record:           %s\n", sip_cfg.dub_pauseRecord);
 	ast_cli(a->fd, "  Resume record:          %s\n", sip_cfg.dub_resumeRecord);
-        ast_cli(a->fd, "  Record Silent Pause:    %d\n", sip_cfg.dub_record_silent_pause);//DUB: Insert silence for the paused duration
+	ast_cli(a->fd, "  Record Silent Pause:    %d\n", sip_cfg.dub_record_silent_pause);//DUB: Insert silence for the paused duration
 
 	ast_cli(a->fd, "\nDefault Settings:\n");
 	ast_cli(a->fd, "-----------------\n");
@@ -21617,7 +21617,7 @@ static void handle_request_info(struct sip_pvt *p, struct sip_request *req)
 				ast_verbose("* DTMF-relay event received: %c\n", (int) f.subclass.integer);
 			}
 		}
-		/*! DUB - Update this */
+		/*! DUB - If we are going to support SIP INFO */
 		//dub_channel_build_dtmf_pattern(p, buf[0]);
 		transmit_response(p, "200 OK", req);
 		return;

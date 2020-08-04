@@ -202,20 +202,20 @@ struct ast_channel {
 	char sending_dtmf_digit;			/*!< Digit this channel is currently sending out. (zero if not sending) */
 	struct timeval sending_dtmf_tv;			/*!< The time this channel started sending the current digit. (Invalid if sending_dtmf_digit is zero.) */
 
-        long int pkt_count;				/*!< DUB - Count of packets on Stream */
-        long int extra_pkt;				/*!< DUB - Count of extra packets on Stream */
-        long int stream_last_ts;			/*!< DUB - Last TS of Stream */
-        long int last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream */
-        long int packet_size;				/*!< DUB - ptime of Stream */
-        long int pause_start_time;			/*!< DUB - Recording Pause Start time */
-        struct timeval rec_start_time;			/*!< DUB - Recording Start time */
-        struct timeval rec_end_ts;			/*!< DUB - Recording Stream end ts */
-        unsigned int stream_last_ssrc;			/*!< DUB - Last SSRC for stream */
-        char dub_pauseRecord[DUB_CMD_DIGITS];		/*!< DUB - DTMF pattern sequence to pause recording */
-        char dub_resumeRecord[DUB_CMD_DIGITS];		/*!< DUB - DTMF pattern sequence to resume recording */
-        struct dub_collect_dtmf dub_dtmf_store;		/*!< DUB - Store the received DTMF pattern of Stream */
-        char pause_resume_events[DUB_PAUSE_RESUME_EVENTS]; /*!< DUB - Pause & resume events */
-        int pause_resume_event_counter;			/*!< DUB - Pause & resume events counter */
+	long int pkt_count;				/*!< DUB - Count of packets on Stream */
+	long int extra_pkt;				/*!< DUB - Count of extra packets on Stream */
+	long int stream_last_ts;			/*!< DUB - Last TS of Stream */
+	long int last_f_seq;				/*!< DUB - Last Frame SeqNo of Stream */
+	long int packet_size;				/*!< DUB - ptime of Stream */
+	long int pause_start_time;			/*!< DUB - Recording Pause Start time */
+	struct timeval rec_start_time;			/*!< DUB - Recording Start time */
+	struct timeval rec_end_ts;			/*!< DUB - Recording Stream end ts */
+	unsigned int stream_last_ssrc;			/*!< DUB - Last SSRC for stream */
+	char dub_pauseRecord[DUB_CMD_DIGITS];		/*!< DUB - DTMF pattern sequence to pause recording */
+	char dub_resumeRecord[DUB_CMD_DIGITS];		/*!< DUB - DTMF pattern sequence to resume recording */
+	struct dub_collect_dtmf dub_dtmf_store;		/*!< DUB - Store the received DTMF pattern of Stream */
+	char pause_resume_events[DUB_PAUSE_RESUME_EVENTS]; /*!< DUB - Pause & resume events */
+	int pause_resume_event_counter;			/*!< DUB - Pause & resume events counter */
 	struct timeval last_rec_time;			/*!< DUB - Last RTP packet written timestamp */
 };
 

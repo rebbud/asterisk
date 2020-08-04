@@ -785,7 +785,7 @@ struct sip_settings {
 	int websocket_write_timeout; /*!< Socket write timeout for websocket transports, in ms */
 	char dub_pauseRecord[DUB_CMD_DIGITS];  /*!< DTMF pattern sequence to pause recording */
 	char dub_resumeRecord[DUB_CMD_DIGITS]; /*!< DTMF pattern sequence to resume recording */
-        int dub_record_silent_pause;    /*! DUB - Record silent pause */
+	int dub_record_silent_pause;    /*! DUB - Record silent pause */
 };
 
 /*! \brief The SIP socket definition */
