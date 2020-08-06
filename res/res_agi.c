@@ -70,7 +70,7 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 #define AST_API_MODULE
 #include "asterisk/agi.h"
 
-#define MIN_FRAME_GAP 5
+#define MIN_FRAME_GAP 10
 
 /*** DOCUMENTATION
 	<agi name="answer" language="en_US">
