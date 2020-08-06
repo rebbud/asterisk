@@ -1478,17 +1478,6 @@ struct timeval ast_channel_get_rec_end_ts(struct ast_channel *chan)
 	return chan->rec_end_ts;
 }
 
-/*! Set and Get last SSRC for streams  */
-void ast_channel_set_last_ssrc(struct ast_channel *chan, unsigned int themssrc)
-{
-	chan->stream_last_ssrc = themssrc;
-}
-
-unsigned int  ast_channel_get_last_ssrc(struct ast_channel *chan)
-{
-	return chan->stream_last_ssrc;
-}
-
 /*! Get and Set ptime */
 long int ast_channel_get_ptime(const struct ast_channel *chan)
 {

@@ -21618,8 +21618,7 @@ static void handle_request_info(struct sip_pvt *p, struct sip_request *req)
 				ast_verbose("* DTMF-relay event received: %c\n", (int) f.subclass.integer);
 			}
 		}
-		/*! DUB - If we are going to support SIP INFO */
-		//dub_channel_build_dtmf_pattern(p, buf[0]);
+
 		transmit_response(p, "200 OK", req);
 		return;
 	} else if (!strcasecmp(c, "application/media_control+xml")) {

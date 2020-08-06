@@ -6731,7 +6731,7 @@ static enum ast_pbx_result __ast_pbx_run(struct ast_channel *c,
 				struct timeval rec_end_ts = ast_channel_get_rec_end_ts(c);
 				int64_t rec_duration = ast_tvdiff_sec(rec_end_ts, ast_channel_get_rec_start_time(c));
 
-				ast_log(LOG_NOTICE, "Rx Packets: %ld\t Extra Packets: %ld\t Total Packets: %ld\n", rx_pkt, extra_pkt, rx_pkt+extra_pkt);
+				ast_log(LOG_NOTICE, "Rx Packets: %ld Extra Packets: %ld Total Packets: %ld\n", rx_pkt, extra_pkt, rx_pkt+extra_pkt);
 				ast_log(LOG_NOTICE, "Recording Duration (seconds): %ld\n", ++rec_duration);
 				ast_log(LOG_NOTICE, "Pause & Resume events: %s\n", ast_channel_get_pause_resume_events(c));
 

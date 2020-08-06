@@ -2595,7 +2595,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			}
 			switch(f->frametype) {
 			case AST_FRAME_DTMF:
-				ast_debug(3, "DUB: Processing DTMF digit=%c, flag=%d \n", f->subclass.integer, 
+				ast_log(LOG_NOTICE, "DUB: Processing DTMF digit=%c, flag=%d \n", f->subclass.integer, 
 					ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
 
 				/*! DUB - Verify dtmf */
@@ -2623,7 +2623,6 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					ast_writestream(fs, f);
 				} else {
 					if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
-						ast_log(LOG_WARNING, "I am going to write a single silent packet");
 						add_single_silence_packet(chan, f, fs);
 					}
 				}
