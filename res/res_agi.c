@@ -2475,9 +2475,11 @@ static int add_single_silence_packet(struct ast_channel *chan, struct ast_frame 
 	insert_silence(chan, f, fs, f_no, f_ptime, f_ptime+f_no);
 
 	/*! Save the ts and sequence number for the next check */
+	ast_channel_set_extra_pkt_count(chan, 1);
 	ast_channel_set_last_ts(chan, f->ts);
 	ast_channel_set_last_seq(chan, f->seqno);
 	ast_channel_set_rec_end_ts(chan);
+	ast_channel_set_last_rec_time(chan);
 	return 0;
 }  
 
