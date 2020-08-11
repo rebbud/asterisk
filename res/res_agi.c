@@ -70,7 +70,7 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision$")
 #define AST_API_MODULE
 #include "asterisk/agi.h"
 
-#define MIN_FRAME_GAP 5
+#define MIN_FRAME_GAP 10
 
 /*** DOCUMENTATION
 	<agi name="answer" language="en_US">
@@ -2302,99 +2302,179 @@ static int handle_setpriority(struct ast_channel *chan, AGI *agi, int argc, cons
 	ast_agi_send(agi->fd, chan, "200 result=0\n");
 	return RESULT_SUCCESS;
 }
+
+/*! DUB - Compare the received dtmf pattern against the configured one */
+static void dub_channel_cmp_dtmf_pattern(struct ast_channel *chan)
+{
+        if (!ast_channel_cmp_pause_recording(chan) &&
+            !ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+                /* DUB - Set flag to pause recording */
+                ast_set_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
+                ast_log(LOG_NOTICE, "DUB - Set flag=%d and paused the recording !!!\n", ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+                ast_channel_reset_user_dtmf(chan);
+                ast_channel_update_pause_resume_events(chan, PAUSE_EVENT);
+        } else if (!ast_channel_cmp_resume_recording(chan)  &&
+                  ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
+                /* DUB - Clear pause recording flag */
+                ast_clear_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING);
+                ast_log(LOG_NOTICE, "DUB - Cleared flag=%d and recording has resumed !!!\n", ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+                ast_channel_reset_user_dtmf(chan);
+                ast_channel_update_pause_resume_events(chan, RESUME_EVENT);
+        }
+
+        return;
+}
+
+/*! DUB - brief  build a pattern of DTMF digits - Maximum 3 */
+static void dub_channel_build_dtmf_pattern(struct ast_channel *chan, struct ast_frame *f)
+{
+        /* Append the last received digit and check the stored timestamp.
+         * if current time - stored > 3s, discard existing store and build fresh.
+         * also clear the store when number of collected digits reaches maximum length. */
+
+        int duration = 0;
+        char *pause = ast_channel_get_pause_seq(chan);
+        char *resume = ast_channel_get_resume_seq(chan);
+
+        if ((pause != NULL) && (resume != NULL)) {
+                if (!strlen(pause) || !strlen(resume)) {
+                        ast_log(LOG_WARNING, "pause_record/resume_record pattern not configured in sip.conf\n");
+                        return;
+                }
+        } else {
+                ast_log(LOG_ERROR, "pause_record/resume_record pattern is NULL\n");
+                return;
+        }
+
+        duration = ast_tvdiff_sec(ast_tvnow(), ast_channel_get_last_received_digit_tv(chan));
+
+        if ((duration > 3) || (strlen(ast_channel_get_user_dtmf(chan))+1 == DUB_CMD_DIGITS)) {
+                ast_channel_reset_user_dtmf(chan); // clear existing pattern
+        }
+
+        ast_channel_set_user_dtmf(chan, (char) f->subclass.integer);
+        ast_channel_set_last_received_digit_tv(chan);
+        dub_channel_cmp_dtmf_pattern(chan);
+        return;
+}
+
 /* DUB inserting silence */
 static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, long int ts_start, long int f_ptime, long int gap_ms)
 {
-    int j=0;
-    short buf[f->datalen];
-    struct ast_frame *duped_frame = NULL;
-    unsigned char g729_filler[] = {
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
-        114, 170, 255, 103, 54, 82, 216, 110, 255, 81
-    };
+	int j=0;
+	short buf[f->datalen];
+	struct ast_frame *duped_frame = NULL;
+	unsigned char g729_filler[] = {
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81,
+		114, 170, 255, 103, 54, 82, 216, 110, 255, 81
+	};
 
-    /* Generating silent frame */
-    switch (f->subclass.format.id) {
-        case AST_FORMAT_G729A:
-            memcpy(buf, g729_filler, f->datalen);
-            break;
-        case AST_FORMAT_ULAW:
-        case AST_FORMAT_ALAW:
-            memset(buf, 0, sizeof(buf));
-            break;
-        default:
-            memset(buf, 0, sizeof(buf));
-    }
+	/* Generating silent frame */
+	switch (f->subclass.format.id) {
+		case AST_FORMAT_G729A:
+			memcpy(buf, g729_filler, f->datalen);
+			break;
+		case AST_FORMAT_ULAW:
+		case AST_FORMAT_ALAW:
+			memset(buf, 0, sizeof(buf));
+			break;
+		default:
+			memset(buf, 0, sizeof(buf));
+	}
 
-    duped_frame = ast_frdup(f);
-    duped_frame->data.ptr = &buf;
-    duped_frame->delivery.tv_sec -= (int) gap_ms/1000;
-    duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
+	duped_frame = ast_frdup(f);
+	duped_frame->data.ptr = &buf;
+	duped_frame->delivery.tv_sec -= (int) gap_ms/1000;
+	duped_frame->delivery.tv_usec -= (long int) f->delivery.tv_usec%1000000;
 
-    for (;ts_start<gap_ms;ts_start+=f_ptime) {
-        duped_frame->ts = ts_start;
-        duped_frame->delivery.tv_usec += (f_ptime*100);
-        duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
-        duped_frame->delivery.tv_usec %= 1000000;
+	for (;ts_start<gap_ms;ts_start+=f_ptime) {
+		duped_frame->ts = ts_start;
+		duped_frame->delivery.tv_usec += (f_ptime*100);
+		duped_frame->delivery.tv_sec += duped_frame->delivery.tv_usec/1000000;
+		duped_frame->delivery.tv_usec %= 1000000;
 
-        ast_debug(1, "EXTRA FRAME - seqno: %d\t delivery_ts: %ld.%06ld\t ts: %ld\n", duped_frame->seqno, duped_frame->delivery.tv_sec, 
-		  duped_frame->delivery.tv_usec, duped_frame->ts);
+		ast_debug(9, "EXTRA FRAME - seqno: %d\t delivery_ts: %ld.%06ld\t ts: %ld\n", duped_frame->seqno,
+			duped_frame->delivery.tv_sec, duped_frame->delivery.tv_usec, duped_frame->ts);
 
-        ast_writestream(fs, duped_frame);
-        j++;
-    }
+		ast_writestream(fs, duped_frame);
+		j++;
+	}
     	
-    if (j > 1)
-        ast_log(LOG_WARNING, " %d EXTRA FRAME WRITTEN !!!\n",j);
-   	
-    ast_frfree(duped_frame); /* free the duped_frame frame */
-    return 0;
+	if (j > 1){
+		ast_log(LOG_WARNING, " %d EXTRA FRAME WRITTEN !!!\n",j);
+		ast_channel_set_extra_pkt_count(chan, j);
+	}
+
+	ast_frfree(duped_frame); /* free the duped_frame frame */
+	return 0;
 }	
 
 /* DUB adding silence packets */
 static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs)
 {
-    long int max_pkts   = (2*60*60*1000);
-    long int nframes    = 0;
-    long int f_ptime    = 0;
-    int64_t gap_ms      = 0;
-    struct timeval s_tv = ast_channel_get_last_rec_time(chan);
-   
-    if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
-        ast_log(LOG_NOTICE, "Setting the Record Start time \n" );
-    }else{	
-        f_ptime = ast_channel_get_ptime(chan);
-        if(f_ptime < 5)
-           f_ptime=20;
+	long int max_pkts   = (2*60*60*1000);
+	long int nframes    = 0;
+	long int f_ptime    = 0;
+	int64_t gap_ms      = 0;
+	struct timeval s_tv = ast_channel_get_last_rec_time(chan);
 
-        max_pkts /= f_ptime;
-        gap_ms   = ast_tvdiff_ms(ast_tvnow(), s_tv);
-        nframes  = gap_ms/f_ptime;
+	if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
+		ast_log(LOG_NOTICE, "Setting the Record Start time \n" );
+		ast_channel_set_rec_start_time(chan);
+	} else {
+		f_ptime = ast_channel_get_ptime(chan);
+		if(f_ptime < 5)
+			f_ptime=20;
 
-        if ((nframes > MIN_FRAME_GAP ) && (nframes < max_pkts)){
-             ast_log(LOG_WARNING, "Gap=%ld (ms)...\n", gap_ms);
-             ast_debug(1, " Gap : %ld\t f->ts: %ld\t \n", gap_ms, f->ts);
-             insert_silence(chan, f, fs, 0, f_ptime, gap_ms);
-        } else {
-          if (nframes > max_pkts)
-              ast_log(LOG_ERROR, "RTP delayed by %ld (ms) > (2 hours)...\n", gap_ms);
-        }
-    }
-    ast_channel_set_last_rec_time(chan);
-    return 0;
+		max_pkts /= f_ptime;
+		gap_ms   = ast_tvdiff_ms(ast_tvnow(), s_tv);
+		nframes  = gap_ms/f_ptime;
+
+		if ((nframes > MIN_FRAME_GAP ) && (nframes < max_pkts)){
+			ast_log(LOG_WARNING, "Gap=%ld (ms)...\n", gap_ms);
+			ast_debug(1, " Gap : %ld\t f->ts: %ld\t \n", gap_ms, f->ts);
+			insert_silence(chan, f, fs, 0, f_ptime, gap_ms);
+		} else {
+			if (nframes > max_pkts)
+				ast_log(LOG_ERROR, "RTP delayed by %ld (ms) > (2 hours)...\n", gap_ms);
+		}
+	}
+
+	/*! Save the ts and sequence number for the next check */
+	ast_channel_set_pkt_count(chan);
+	ast_channel_set_last_rec_time(chan);
+	return 0;
 }
+
+/*! DUB - Add silence silence packet to the Recording file */
+static int add_single_silence_packet(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs)
+{
+	long int f_ptime=0;
+
+	/*! ptime for the stream */
+	f_ptime=ast_channel_get_ptime(chan);
+	if(f_ptime < 5)
+		f_ptime=20;
+
+	insert_silence(chan, f, fs, 0, f_ptime, f_ptime);
+
+	/*! Save the ts and sequence number for the next check */
+	ast_channel_set_extra_pkt_count(chan, 1);
+	ast_channel_set_last_rec_time(chan);
+	return 0;
+}  
 
 static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const char * const argv[])
 {
@@ -2510,8 +2590,12 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			}
 			switch(f->frametype) {
 			case AST_FRAME_DTMF:
-				ast_debug(5, "DUB: no processing for DTMF digit=%d, flag=%d \n", f->subclass.integer,
+				ast_log(LOG_NOTICE, "DUB: Processing DTMF digit=%c, flag=%d \n", f->subclass.integer, 
 					ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING));
+
+				/*! DUB - Verify dtmf */
+				dub_channel_build_dtmf_pattern(chan, f);
+
 				if (strchr(argv[4], f->subclass.integer)) {
 					/* This is an interrupting chracter, so rewind to chop off any small
 					   amount of DTMF that may have been recorded
@@ -2529,10 +2613,17 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				break;
 			case AST_FRAME_VOICE:
 				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-					ast_debug(5, "DUB, recording\n");
+					
 					add_silence(chan, f, fs);
 					ast_writestream(fs, f);
-				        
+				} else {
+					if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
+						add_single_silence_packet(chan, f, fs);
+					}
+				}
+				
+				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING) || 
+				     ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
 					/* this is a safe place to check progress since we know that fs
 					 * is valid after a write, and it will then have our current
 					 * location */
@@ -2552,8 +2643,6 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 						}
 					}
 				}
-				else 
-					ast_debug(5, "DUB, recording paused\n");
 
 				break;
 			case AST_FRAME_VIDEO:
