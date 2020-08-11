@@ -3971,17 +3971,8 @@ void ast_channel_set_pkt_count(struct ast_channel *chan);
 long int ast_channel_get_extra_pkt_count(const struct ast_channel *chan);
 void ast_channel_set_extra_pkt_count(struct ast_channel *chan, int count);
 
-long int ast_channel_get_last_ts(const struct ast_channel *chan);
-void ast_channel_set_last_ts(struct ast_channel *chan, long int ts);
-
 void ast_channel_set_rec_start_time(struct ast_channel *chan);
 struct timeval ast_channel_get_rec_start_time(struct ast_channel *chan);
-
-void ast_channel_set_rec_end_ts(struct ast_channel *chan);
-struct timeval ast_channel_get_rec_end_ts(struct ast_channel *chan);
-
-long int ast_channel_get_last_seq(const struct ast_channel *chan);
-void ast_channel_set_last_seq(struct ast_channel *chan, long int seq);
 
 long int ast_channel_get_ptime(const struct ast_channel *chan);
 void ast_channel_set_ptime(struct ast_channel *chan, long int s_ptime);

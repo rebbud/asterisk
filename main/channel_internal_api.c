@@ -1434,28 +1434,6 @@ void ast_channel_set_extra_pkt_count(struct ast_channel *chan, int count)
 	chan->extra_pkt += count;
 }
 
-/*! Get and Set the last ts */
-long int ast_channel_get_last_ts(const struct ast_channel *chan)
-{
-	return chan->stream_last_ts;
-}
-
-void ast_channel_set_last_ts(struct ast_channel *chan, long int ts)
-{
-	chan->stream_last_ts = ts;
-}
-
-/*! Get and Set last stream sequence number */
-long int ast_channel_get_last_seq(const struct ast_channel *chan)
-{
-	return chan->last_f_seq;
-}
-
-void ast_channel_set_last_seq(struct ast_channel *chan, long int seq)
-{
-	chan->last_f_seq = seq;
-}
-
 /*! Set the recording start time */
 void ast_channel_set_rec_start_time(struct ast_channel *chan)
 {
@@ -1465,17 +1443,6 @@ void ast_channel_set_rec_start_time(struct ast_channel *chan)
 struct timeval ast_channel_get_rec_start_time(struct ast_channel *chan)
 {
         return chan->rec_start_time;
-}
-
-/*! Set and get recording end ts for streams */
-void ast_channel_set_rec_end_ts(struct ast_channel *chan)
-{
-	chan->rec_end_ts = ast_tvnow();
-}
-
-struct timeval ast_channel_get_rec_end_ts(struct ast_channel *chan)
-{
-	return chan->rec_end_ts;
 }
 
 /*! Get and Set ptime */

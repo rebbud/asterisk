@@ -6728,7 +6728,7 @@ static enum ast_pbx_result __ast_pbx_run(struct ast_channel *c,
 				/*! DUB - Print summary of RTP packets, recording duration and P&R events */
 				long int rx_pkt = ast_channel_get_pkt_count(c);
 				long int extra_pkt = ast_channel_get_extra_pkt_count(c);
-				struct timeval rec_end_ts = ast_channel_get_rec_end_ts(c);
+				struct timeval rec_end_ts = ast_channel_get_last_rec_time(c);
 				int64_t rec_duration = ast_tvdiff_sec(rec_end_ts, ast_channel_get_rec_start_time(c));
 
 				ast_log(LOG_NOTICE, "Rx Packets: %ld Extra Packets: %ld Total Packets: %ld\n", rx_pkt, extra_pkt, rx_pkt+extra_pkt);

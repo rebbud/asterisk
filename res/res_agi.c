@@ -2454,9 +2454,6 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 
 	/*! Save the ts and sequence number for the next check */
 	ast_channel_set_pkt_count(chan);
-	ast_channel_set_last_ts(chan, f->ts);
-	ast_channel_set_last_seq(chan, f->seqno);
-	ast_channel_set_rec_end_ts(chan);
 	ast_channel_set_last_rec_time(chan);
 	return 0;
 }
@@ -2464,21 +2461,17 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 /*! DUB - Add silence silence packet to the Recording file */
 static int add_single_silence_packet(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs)
 {
-	long int f_no=0, f_ptime=0;
+	long int f_ptime=0;
 
 	/*! ptime for the stream */
 	f_ptime=ast_channel_get_ptime(chan);
 	if(f_ptime < 5)
 		f_ptime=20;
 
-	f_no = ast_channel_get_last_ts(chan)+f_ptime;
-	insert_silence(chan, f, fs, f_no, f_ptime, f_ptime+f_no);
+	insert_silence(chan, f, fs, 0, f_ptime, f_ptime);
 
 	/*! Save the ts and sequence number for the next check */
 	ast_channel_set_extra_pkt_count(chan, 1);
-	ast_channel_set_last_ts(chan, f->ts);
-	ast_channel_set_last_seq(chan, f->seqno);
-	ast_channel_set_rec_end_ts(chan);
 	ast_channel_set_last_rec_time(chan);
 	return 0;
 }  
