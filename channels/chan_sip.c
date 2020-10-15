@@ -11343,6 +11343,7 @@ static int process_sdp_a_audio(const char *a, struct sip_pvt *p, struct ast_rtp_
 
 		if ((format = ast_rtp_codecs_get_payload_format(newaudiortp, codec))) {
 			unsigned int bit_rate;
+			unsigned int value;
 
 			if (!ast_format_sdp_parse(format, fmtp_string)) {
 				found = TRUE;
@@ -11351,6 +11352,23 @@ static int process_sdp_a_audio(const char *a, struct sip_pvt *p, struct ast_rtp_
 			}
 
 			switch ((int) format->id) {
+			case AST_FORMAT_AMRNB:
+				if (sscanf(fmtp_string, "mode=%30u", &value) == 1) {
+					ast_log(LOG_WARNING, "Got AMR-NB mode=%d\n", value);
+					/* TODO: actually handle this */
+					found = TRUE;
+				}
+				if (sscanf(fmtp_string, "octet-align=%30u", &value) == 1) {
+					ast_log(LOG_WARNING, "Got AMR-NB octet-align set to [%s]\n", value ? "on" : "off");
+					/* TODO: actually handle this */
+					found = TRUE;
+				}
+				if (sscanf(fmtp_string, "dtx=%30u", &value) == 1) {
+					ast_log(LOG_WARNING, "Got AMR-NB  set to [%s]\n", value ? "on" : "off");
+					/* TODO: actually handle this */
+					found = TRUE;
+				}
+				break;
 			case AST_FORMAT_SIREN7:
 				if (sscanf(fmtp_string, "bitrate=%30u", &bit_rate) == 1) {
 					if (bit_rate != 32000) {
@@ -13033,6 +13051,10 @@ static void add_codec_to_sdp(const struct sip_pvt *p,
 	case AST_FORMAT_ILBC:
 		/* Add information about us using only 20/30 ms packetization */
 		ast_str_append(a_buf, 0, "a=fmtp:%d mode=%d\r\n", rtp_code, fmt.cur_ms);
+		break;
+	case AST_FORMAT_AMRNB:
+		/* Indicate that we accept octet-align mode set to 1 (AMR-NB for exoteric devices)*/
+		ast_str_append(a_buf, 0, "a=fmtp:%d octet-align=1\r\n", rtp_code);
 		break;
 	case AST_FORMAT_SIREN7:
 		/* Indicate that we only expect 32Kbps */

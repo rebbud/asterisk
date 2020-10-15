@@ -101,6 +101,8 @@ enum ast_format_id {
 	AST_FORMAT_SLINEAR192       = 27 + AST_FORMAT_TYPE_AUDIO,
 	AST_FORMAT_SPEEX32          = 28 + AST_FORMAT_TYPE_AUDIO,
 	AST_FORMAT_CELT             = 29 + AST_FORMAT_TYPE_AUDIO,
+	/*! AMR-NB compression */
+	AST_FORMAT_AMRNB            = 30 + AST_FORMAT_TYPE_AUDIO,
 
 	/*! H.261 Video */
 	AST_FORMAT_H261             = 1 + AST_FORMAT_TYPE_VIDEO,

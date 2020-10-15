@@ -908,6 +908,7 @@ struct ast_format *ast_best_codec(struct ast_format_cap *cap, struct ast_format 
 		/*! Okay, we're down to vocoders now, so pick GSM because it's small and easier to
 		    translate and sounds pretty good */
 		AST_FORMAT_GSM,
+		AST_FORMAT_AMRNB,
 		/*! iLBC is not too bad */
 		AST_FORMAT_ILBC,
 		/*! Speex is free, but computationally more expensive than GSM */

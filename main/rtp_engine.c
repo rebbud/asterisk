@@ -2322,6 +2322,7 @@ int ast_rtp_engine_init()
 	/* Define all the RTP mime types available */
 	set_next_mime_type(ast_format_set(&tmpfmt, AST_FORMAT_G723_1, 0), 0, "audio", "G723", 8000);
 	set_next_mime_type(ast_format_set(&tmpfmt, AST_FORMAT_GSM, 0), 0, "audio", "GSM", 8000);
+	set_next_mime_type(ast_format_set(&tmpfmt, AST_FORMAT_AMRNB, 0), 0, "audio", "AMR", 8000);
 	set_next_mime_type(ast_format_set(&tmpfmt, AST_FORMAT_ULAW, 0), 0, "audio", "PCMU", 8000);
 	set_next_mime_type(ast_format_set(&tmpfmt, AST_FORMAT_ULAW, 0), 0, "audio", "G711U", 8000);
 	set_next_mime_type(ast_format_set(&tmpfmt, AST_FORMAT_ALAW, 0), 0, "audio", "PCMA", 8000);
@@ -2380,6 +2381,7 @@ int ast_rtp_engine_init()
 	add_static_payload(26, ast_format_set(&tmpfmt, AST_FORMAT_JPEG, 0), 0);
 	add_static_payload(31, ast_format_set(&tmpfmt, AST_FORMAT_H261, 0), 0);
 	add_static_payload(34, ast_format_set(&tmpfmt, AST_FORMAT_H263, 0), 0);
+	add_static_payload(96, ast_format_set(&tmpfmt, AST_FORMAT_AMRNB, 0), 0);
 	add_static_payload(97, ast_format_set(&tmpfmt, AST_FORMAT_ILBC, 0), 0);
 	add_static_payload(98, ast_format_set(&tmpfmt, AST_FORMAT_H263_PLUS, 0), 0);
 	add_static_payload(99, ast_format_set(&tmpfmt, AST_FORMAT_H264, 0), 0);

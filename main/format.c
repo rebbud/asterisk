@@ -430,6 +430,9 @@ uint64_t ast_format_id_to_old_bitfield(enum ast_format_id id)
 	/*! SpeeX Wideband (16kHz) Free Compression */
 	case AST_FORMAT_SPEEX16:
 		return (1ULL << 33);
+	/*! AMR-NB compression */
+	case AST_FORMAT_AMRNB:
+		return (1ULL << 35);
 	/*! Raw mu-law data (G.711) */
 	case AST_FORMAT_TESTLAW:
 		return (1ULL << 47);
@@ -532,6 +535,9 @@ struct ast_format *ast_format_from_old_bitfield(struct ast_format *dst, uint64_t
 	/*! SpeeX Wideband (16kHz) Free Compression */
 	case (1ULL << 33):
 		return ast_format_set(dst, AST_FORMAT_SPEEX16, 0);
+	/*! AMR-NB compression */
+	case (1ULL << 35):
+		return ast_format_set(dst, AST_FORMAT_AMRNB, 0);
 	/*! Raw mu-law data (G.711) */
 	case (1ULL << 47):
 		return ast_format_set(dst, AST_FORMAT_TESTLAW, 0);
@@ -1075,6 +1081,7 @@ static int format_list_init(void)
 	 * bits assigned so chan_iax2 in particular and other legacy modules
 	 * that use compatibility bits will not be aware of them.
 	 */
+	format_list_add_static(ast_format_set(&tmpfmt, AST_FORMAT_AMRNB, 0), "amr", 8000, "AMR-NB", 32, 20, 300, 20, 20, 0, 0);               /*!< codec_amrnb.c */
 	format_list_add_static(ast_format_set(&tmpfmt, AST_FORMAT_SPEEX32, 0), "speex32", 32000, "SpeeX 32khz", 10, 10, 60, 10, 20, 0, 0);   /*!< codec_speex.c */
 	format_list_add_static(ast_format_set(&tmpfmt, AST_FORMAT_SLINEAR12, 0), "slin12", 12000, "16 bit Signed Linear PCM (12kHz)", 240, 10, 70, 10, 20, AST_SMOOTHER_FLAG_BE, 0);/*!< Signed linear (12kHz) */
 	format_list_add_static(ast_format_set(&tmpfmt, AST_FORMAT_SLINEAR24, 0), "slin24", 24000, "16 bit Signed Linear PCM (24kHz)", 480, 10, 70, 10, 20, AST_SMOOTHER_FLAG_BE, 0);/*!< Signed linear (24kHz) */
