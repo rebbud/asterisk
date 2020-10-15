@@ -785,6 +785,10 @@ PBX_SPEEX
 SPEEX_DIR
 SPEEX_INCLUDE
 SPEEX_LIB
+PBX_AMRNB
+AMRNB_DIR
+AMRNB_INCLUDE
+AMRNB_LIB
 PBX_SS7
 SS7_DIR
 SS7_INCLUDE
@@ -1295,6 +1299,7 @@ with_SDL_image
 with_sounds_cache
 with_spandsp
 with_ss7
+with_opencore_amrnb
 with_speex
 with_speexdsp
 with_sqlite
@@ -2027,6 +2032,8 @@ Optional Packages:
                           use cached sound tarfiles in PATH
   --with-spandsp=PATH     use SPANDSP files in PATH
   --with-ss7=PATH         use ISDN SS7 files in PATH
+  --with-opencore-amrnb=PATH
+                          use OpenCORE AMR-NB files in PATH
   --with-speex=PATH       use Speex files in PATH
   --with-speex=PATH       use Speex preprocess routines files in PATH
   --with-speexdsp=PATH    use SpeexDSP files in PATH
@@ -10606,6 +10613,38 @@ if test "${with_ss7+set}" = set; then :
 	*)
 	SS7_DIR="${withval}"
 	ac_mandatory_list="${ac_mandatory_list} SS7"
+	;;
+	esac
+
+fi
+
+
+
+
+
+
+
+
+    AMRNB_DESCRIP="OpenCORE AMR-NB"
+    AMRNB_OPTION="opencore-amrnb"
+    PBX_AMRNB=0
+
+# Check whether --with-opencore-amrnb was given.
+if test "${with_opencore_amrnb+set}" = set; then :
+  withval=$with_opencore_amrnb;
+	case ${withval} in
+	n|no)
+	USE_AMRNB=no
+	# -1 is a magic value used by menuselect to know that the package
+	# was disabled, other than 'not found'
+	PBX_AMRNB=-1
+	;;
+	y|ye|yes)
+	ac_mandatory_list="${ac_mandatory_list} AMRNB"
+	;;
+	*)
+	AMRNB_DIR="${withval}"
+	ac_mandatory_list="${ac_mandatory_list} AMRNB"
 	;;
 	esac
 
@@ -27347,6 +27386,111 @@ fi
          PBX_COROSYNC_CFG_STATE_TRACK=1
          cat >>confdefs.h <<_ACEOF
 #define HAVE_COROSYNC_CFG_STATE_TRACK 1
+_ACEOF
+
+      fi
+   fi
+fi
+
+
+
+
+if test "x${PBX_AMRNB}" != "x1" -a "${USE_AMRNB}" != "no"; then
+   pbxlibdir=""
+   # if --with-AMRNB=DIR has been specified, use it.
+   if test "x${AMRNB_DIR}" != "x"; then
+      if test -d ${AMRNB_DIR}/lib; then
+         pbxlibdir="-L${AMRNB_DIR}/lib"
+      else
+         pbxlibdir="-L${AMRNB_DIR}"
+      fi
+   fi
+   pbxfuncname="Decoder_Interface_Decode"
+   if test "x${pbxfuncname}" = "x" ; then   # empty lib, assume only headers
+      AST_AMRNB_FOUND=yes
+   else
+      ast_ext_lib_check_save_CFLAGS="${CFLAGS}"
+      CFLAGS="${CFLAGS} "
+      as_ac_Lib=`$as_echo "ac_cv_lib_opencore-amrnb_${pbxfuncname}" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${pbxfuncname} in -lopencore-amrnb" >&5
+$as_echo_n "checking for ${pbxfuncname} in -lopencore-amrnb... " >&6; }
+if eval \${$as_ac_Lib+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lopencore-amrnb ${pbxlibdir}  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ${pbxfuncname} ();
+int
+main ()
+{
+return ${pbxfuncname} ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  eval "$as_ac_Lib=yes"
+else
+  eval "$as_ac_Lib=no"
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+eval ac_res=\$$as_ac_Lib
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_Lib"\" = x"yes"; then :
+  AST_AMRNB_FOUND=yes
+else
+  AST_AMRNB_FOUND=no
+fi
+
+      CFLAGS="${ast_ext_lib_check_save_CFLAGS}"
+   fi
+
+   # now check for the header.
+   if test "${AST_AMRNB_FOUND}" = "yes"; then
+      AMRNB_LIB="${pbxlibdir} -lopencore-amrnb "
+      # if --with-AMRNB=DIR has been specified, use it.
+      if test "x${AMRNB_DIR}" != "x"; then
+         AMRNB_INCLUDE="-I${AMRNB_DIR}/include"
+      fi
+      AMRNB_INCLUDE="${AMRNB_INCLUDE} "
+      if test "xopencore-amrnb/interf_dec.h" = "x" ; then	# no header, assume found
+         AMRNB_HEADER_FOUND="1"
+      else				# check for the header
+         ast_ext_lib_check_saved_CPPFLAGS="${CPPFLAGS}"
+         CPPFLAGS="${CPPFLAGS} ${AMRNB_INCLUDE}"
+         ac_fn_c_check_header_mongrel "$LINENO" "opencore-amrnb/interf_dec.h" "ac_cv_header_opencore_amrnb_interf_dec_h" "$ac_includes_default"
+if test "x$ac_cv_header_opencore_amrnb_interf_dec_h" = xyes; then :
+  AMRNB_HEADER_FOUND=1
+else
+  AMRNB_HEADER_FOUND=0
+fi
+
+
+         CPPFLAGS="${ast_ext_lib_check_saved_CPPFLAGS}"
+      fi
+      if test "x${AMRNB_HEADER_FOUND}" = "x0" ; then
+         AMRNB_LIB=""
+         AMRNB_INCLUDE=""
+      else
+         if test "x${pbxfuncname}" = "x" ; then		# only checking headers -> no library
+            AMRNB_LIB=""
+         fi
+         PBX_AMRNB=1
+         cat >>confdefs.h <<_ACEOF
+#define HAVE_AMRNB 1
 _ACEOF
 
       fi

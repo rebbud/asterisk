@@ -48,6 +48,9 @@
 /* Define to 1 if you have the Advanced Linux Sound Architecture library. */
 #undef HAVE_ALSA
 
+/* Define to 1 if you have the OpenCORE AMR-NB library. */
+#undef HAVE_AMRNB
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 

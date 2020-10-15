@@ -1029,6 +1029,9 @@ int ast_codec_get_samples(struct ast_frame *f)
 	case AST_FORMAT_GSM:
 		samples = 160 * (f->datalen / 33);
 		break;
+	case AST_FORMAT_AMRNB:
+		samples = 160 * (f->datalen / 32); /* Use smallest packet size. Crude, but... */
+		break;
 	case AST_FORMAT_G729A:
 		samples = f->datalen * 8;
 		break;
@@ -1107,6 +1110,9 @@ int ast_codec_get_len(struct ast_format *format, int samples)
 		break;
 	case AST_FORMAT_GSM:
 		len = (samples / 160) * 33;
+		break;
+	case AST_FORMAT_AMRNB:
+		len = (samples / 160) * 32;
 		break;
 	case AST_FORMAT_G729A:
 		len = samples / 8;
