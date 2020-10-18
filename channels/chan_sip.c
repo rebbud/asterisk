@@ -32523,7 +32523,7 @@ static int reload_config(enum channelreloadreason reason)
                                 sip_cfg.dub_record_silent_pause = TRUE;
                         }
                 }
-		else if (!strcasecmp(v->name, "silence_insertion_enabled")) {
+                else if (!strcasecmp(v->name, "silence_insertion_enabled")) {
                         if (!ast_false(v->value)) {
                                 ast_log(LOG_NOTICE, "DUB - Silence insertion enabled\n");
                                 sip_cfg.silence_insertion_enabled = TRUE;
