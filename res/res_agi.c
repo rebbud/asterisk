@@ -2613,8 +2613,9 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				break;
 			case AST_FRAME_VOICE:
 				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-					
-					add_silence(chan, f, fs);
+					/* DUB Calling add_silence only when silence insertion is enabled */
+                                        if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENCE_INSERTION_ENABLED))
+					    add_silence(chan, f, fs);
 					ast_writestream(fs, f);
 				} else {
 					if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
