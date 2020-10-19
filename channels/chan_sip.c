@@ -25982,6 +25982,17 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, str
                                         ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_RECORD_SILENT_PAUSE);
                                         ast_log(LOG_NOTICE, "DUB - Record silent pause is disabled !!!\n");
                                 }
+
+				/* DUB - Enabling Silence Insertion for Gap in RTP */
+                                if ( sip_cfg.silence_insertion_enabled == TRUE ) {
+                                        ast_set_flag(ast_channel_flags(c), AST_FLAG_DUB_SILENCE_INSERTION_ENABLED);
+                                        ast_log(LOG_NOTICE, "DUB - Silence Insertion is enabled !!!\n");
+                                }else {
+                                        ast_clear_flag(ast_channel_flags(c), AST_FLAG_DUB_SILENCE_INSERTION_ENABLED);
+                                        ast_log(LOG_NOTICE, "DUB - Silence Insertion is disabled !!!\n");
+                                }
+
+				
                         }
 
 		}
@@ -31924,6 +31935,7 @@ static int reload_config(enum channelreloadreason reason)
 	default_expiry = DEFAULT_DEFAULT_EXPIRY;
 
 	sip_cfg.matchexternaddrlocally = DEFAULT_MATCHEXTERNADDRLOCALLY;
+	sip_cfg.silence_insertion_enabled = FALSE;  /* DUB setting default value */
 
 	/* Copy the default jb config over global_jbconf */
 	memcpy(&global_jbconf, &default_jbconf, sizeof(struct ast_jb_conf));
@@ -32509,6 +32521,12 @@ static int reload_config(enum channelreloadreason reason)
                         if (!ast_false(v->value)) {
                                 ast_log(LOG_NOTICE, "DUB - Enabling Record Silent Pause Control\n");
                                 sip_cfg.dub_record_silent_pause = TRUE;
+                        }
+                }
+                else if (!strcasecmp(v->name, "silence_insertion_enabled")) {
+                        if (!ast_false(v->value)) {
+                                ast_log(LOG_NOTICE, "DUB - Silence insertion enabled\n");
+                                sip_cfg.silence_insertion_enabled = TRUE;
                         }
                 }
 	}
