@@ -2619,6 +2619,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					ast_writestream(fs, f);
 				} else {
 					if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
+						add_silence(chan, f, fs);
 						add_single_silence_packet(chan, f, fs);
 					}
 				}
