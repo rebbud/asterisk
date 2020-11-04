@@ -2433,7 +2433,7 @@ static int add_silence(struct ast_channel *chan, struct ast_frame *f, struct ast
 	if (ast_tvcmp(s_tv, ast_tv(0, 0)) == 0) {
 		ast_log(LOG_NOTICE, "Setting the Record Start time \n" );
 		ast_channel_set_rec_start_time(chan);
-	} else {
+	} else if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENCE_INSERTION_ENABLED)) {
 		f_ptime = ast_channel_get_ptime(chan);
 		if(f_ptime < 5)
 			f_ptime=20;
@@ -2613,14 +2613,12 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 				break;
 			case AST_FRAME_VOICE:
 				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-					/* DUB Calling add_silence only when silence insertion is enabled */
-                                        if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_SILENCE_INSERTION_ENABLED))
-					    add_silence(chan, f, fs);
+					add_silence(chan, f, fs);
 					ast_writestream(fs, f);
 				} else {
 					if (ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_RECORD_SILENT_PAUSE)) {
-						add_silence(chan, f, fs);
-						add_single_silence_packet(chan, f, fs);
+					       add_silence(chan, f, fs);
+					       add_single_silence_packet(chan, f, fs);
 					}
 				}
 				
