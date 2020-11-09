@@ -219,6 +219,7 @@
 #define DEFAULT_QUALIFY        FALSE    /*!< Don't monitor devices */
 #define DEFAULT_KEEPALIVE      0        /*!< Don't send keep alive packets */
 #define DEFAULT_KEEPALIVE_INTERVAL 60   /*!< Send keep alive packets at 60 second intervals */
+#define DEFAULT_CALLEVENTS     FALSE    /*!< Extra manager SIP call events */
 #define DEFAULT_ALWAYSAUTHREJECT  TRUE  /*!< Don't reject authentication requests always */
 #define DEFAULT_AUTH_OPTIONS  FALSE
 #define DEFAULT_AUTH_MESSAGE  TRUE
@@ -728,6 +729,9 @@ struct __show_chan_arg {
 	int numchans;   /* return value */
 };
 
+/* DUB - Limit the DTMF sequence to pause/resume recording to three digits */
+#define DUB_CMD_DIGITS 4
+
 /*! \name GlobalSettings
 	Global settings apply to the channel (often settings you can change in the general section
 	of sip.conf
@@ -756,6 +760,7 @@ struct sip_settings {
 	int accept_outofcall_message; /*!< Accept MESSAGE outside of a call */
 	int compactheaders;         /*!< send compact sip headers */
 	int allow_external_domains; /*!< Accept calls to external SIP domains? */
+	int callevents;             /*!< Whether we send manager events or not */
 	int regextenonqualify;      /*!< Whether to add/remove regexten when qualifying peers */
 	int legacy_useroption_parsing; /*!< Whether to strip useroptions in URI via semicolons */
 	int send_diversion;	        /*!< Whether to Send SIP Diversion headers */
@@ -782,6 +787,10 @@ struct sip_settings {
 	int default_max_forwards;    /*!< Default max forwards (SIP Anti-loop) */
 	int websocket_write_timeout; /*!< Socket write timeout for websocket transports, in ms */
 	int websocket_enabled;       /*!< Are websockets enabled? */
+	char dub_pauseRecord[DUB_CMD_DIGITS];  /*!< DUB - DTMF pattern sequence to pause recording */
+	char dub_resumeRecord[DUB_CMD_DIGITS]; /*!< DUB - DTMF pattern sequence to resume recording */
+	int dub_recordControl;		/*! DUB - Call Record Controller */
+	int dub_record_silent_pause;	/*! DUB - Record silent pause */
 };
 
 struct ast_websocket;
@@ -1134,6 +1143,7 @@ struct sip_pvt {
 	struct sip_auth_container *peerauth;/*!< Realm authentication credentials */
 	int noncecount;                     /*!< Nonce-count */
 	unsigned int stalenonce:1;          /*!< Marks the current nonce as responded too */
+	unsigned int late_sdp_negotiation:1;/*!< Got Late SDP Negotiation 0=False,1=True */
 	unsigned int ongoing_reinvite:1;    /*!< There is a reinvite in progress that might need to be cleaned up */
 	char lastmsg[256];                  /*!< Last Message sent/received */
 	int amaflags;                       /*!< AMA Flags */
@@ -1165,6 +1175,10 @@ struct sip_pvt {
 	                                         Used in peerpoke, mwi subscriptions */
 	struct sip_registry *registry;      /*!< If this is a REGISTER dialog, to which registry */
 	struct ast_rtp_instance *rtp;       /*!< RTP Session */
+	struct ast_rtp_instance *rtp2;      /*!< DUB - RTP Session 2nd audio stream */
+	long int packet_size;		    /*!< DUB - Temp Packet Size */
+	long int packet_size_1;		    /*!< DUB - Packet Size */
+	long int packet_size_2;		    /*!< DUB - Packet Size */
 	struct ast_rtp_instance *vrtp;      /*!< Video RTP session */
 	struct ast_rtp_instance *trtp;      /*!< Text RTP session */
 	struct sip_pkt *packets;            /*!< Packets scheduled for re-transmission */
@@ -1175,9 +1189,10 @@ struct sip_pvt {
 	AST_LIST_HEAD_NOLOCK(request_queue, sip_request) request_queue; /*!< Requests that arrived but could not be processed immediately */
 	struct sip_invite_param *options;   /*!< Options for INVITE */
 	struct sip_st_dlg *stimer;          /*!< SIP Session-Timers */
-	struct ast_sdp_srtp *srtp;              /*!< Structure to hold Secure RTP session data for audio */
-	struct ast_sdp_srtp *vsrtp;             /*!< Structure to hold Secure RTP session data for video */
-	struct ast_sdp_srtp *tsrtp;             /*!< Structure to hold Secure RTP session data for text */
+	struct ast_sdp_srtp *srtp;          /*!< Structure to hold Secure RTP session data for audio */
+	struct ast_sdp_srtp *srtp2;          /*!< Structure to hold Secure RTP session data for audio */
+	struct ast_sdp_srtp *vsrtp;         /*!< Structure to hold Secure RTP session data for video */
+	struct ast_sdp_srtp *tsrtp;         /*!< Structure to hold Secure RTP session data for text */
 
 	int red;                            /*!< T.140 RTP Redundancy */
 	int hangupcause;                    /*!< Storage of hangupcause copied from our owner before we disconnect from the AST channel (only used at hangup) */
@@ -1323,6 +1338,7 @@ struct sip_peer {
 	int busy_level;                 /*!< Level of active channels where we signal busy */
 	int maxforwards;                /*!< SIP Loop prevention */
 	enum transfermodes allowtransfer;   /*! SIP Refer restriction scheme */
+	struct ast_codec_pref prefs;    /*!< DUB  codec prefs */
 	int lastmsgssent;				/*!< The last known VM message counts (new/old) */
 	unsigned int sipoptions;        /*!<  Supported SIP options */
 	struct ast_flags flags[3];      /*!<  SIP_ flags */
