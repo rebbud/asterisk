@@ -296,6 +296,9 @@ int daemon(int, int);  /* defined in libresolv of all places */
 #define AST_MAX_CONNECTS 128
 #define NUM_MSGS 64
 
+/*! Default minimum DTMF digit length - 80ms */
+#define AST_MIN_DTMF_DURATION 40
+
 /*! Displayed copyright tag */
 #define COPYRIGHT_TAG "Copyright (C) 1999 - 2018, Digium, Inc. and others."
 
