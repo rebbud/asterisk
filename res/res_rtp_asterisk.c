@@ -358,6 +358,7 @@ struct ast_rtp {
 	struct ast_frame f;
 	unsigned char rawdata[8192 + AST_FRIENDLY_OFFSET];
 	unsigned int ssrc;		/*!< Synchronization source, RFC 3550, page 10. */
+	unsigned int rxssrc;
 	char cname[AST_UUID_STR_LEN]; /*!< Our local CNAME */
 	unsigned int themssrc;		/*!< Their SSRC */
 	unsigned int themssrc_valid;	/*!< True if their SSRC is available. */
@@ -6378,7 +6379,7 @@ static struct ast_frame *ast_rtcp_interpret(struct ast_rtp_instance *instance, s
 				report_block->lsr = ntohl(rtcpheader[i + 4]);
 				report_block->dlsr = ntohl(rtcpheader[i + 5]);
 				if (report_block->lsr
-					&& update_rtt_stats(rtp, report_block->lsr, report_block->dlsr)
+						&& update_rtt_stats(rtp, report_block->lsr, report_block->dlsr)
 					&& rtcp_debug_test_addr(addr)) {
 					struct timeval now;
 					unsigned int lsr_now, lsw, msw;
@@ -7164,7 +7165,7 @@ static struct ast_frame *ast_rtp_interpret(struct ast_rtp_instance *instance, st
 	struct ast_rtp *rtp = ast_rtp_instance_get_data(instance);
 	struct ast_rtp_instance *instance1;
 	int res = length, hdrlen = 12, seqno, payloadtype, padding, mark, ext, cc;
-	unsigned int timestamp;
+	unsigned int timestamp, ssrc;
 	RAII_VAR(struct ast_rtp_payload_type *, payload, NULL, ao2_cleanup);
 	struct frame_list frames;
 
@@ -7188,8 +7189,39 @@ static struct ast_frame *ast_rtp_interpret(struct ast_rtp_instance *instance, st
 	cc = (seqno & 0xF000000) >> 24;
 	seqno &= 0xffff;
 	timestamp = ntohl(rtpheader[1]);
+	ssrc = ntohl(rtpheader[2]);
 
 	AST_LIST_HEAD_INIT_NOLOCK(&frames);
+	
+	/* Force a marker bit and change SSRC if the SSRC changes */
+        if (rtp->rxssrc && rtp->rxssrc != ssrc) {
+                struct ast_frame *f, srcupdate = {
+                        AST_FRAME_CONTROL,
+                        .subclass.integer = AST_CONTROL_SRCCHANGE,
+                };
+
+                if (!mark) {
+                        //if (rtpdebug) {
+                                ast_debug(1, "Forcing Marker bit, because SSRC has changed\n");
+                        //}
+                        mark = 1;
+                }
+		f = ast_frisolate(&srcupdate);
+                AST_LIST_INSERT_TAIL(&frames, f, frame_list);
+
+                rtp->seedrxseqno = 0;
+                rtp->rxcount = 0;
+                rtp->cycles = 0;
+                rtp->lastrxseqno = 0;
+                rtp->last_seqno = 0;
+                rtp->last_end_timestamp = 0;
+                if (rtp->rtcp) {
+                        rtp->rtcp->expected_prior = 0;
+                        rtp->rtcp->received_prior = 0;
+                }
+        }
+
+        rtp->rxssrc = ssrc;
 
 	/* Remove any padding bytes that may be present */
 	if (padding) {
@@ -8979,7 +9011,7 @@ static char *handle_cli_rtcp_set_debug(struct ast_cli_entry *e, int cmd, struct 
 		return NULL;
 	case CLI_GENERATE:
 		return NULL;
-	}
+		}
 
 	if (a->argc == e->args) { /* set on or off */
 		if (!strncasecmp(a->argv[e->args-1], "on", 2)) {

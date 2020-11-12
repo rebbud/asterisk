@@ -251,7 +251,7 @@ struct ast_channel {
 	struct dub_collect_dtmf dub_dtmf_store2; 	/*!< DUB - Store the received DTMF pattern of Stream2 */
 	long int  stream_label; 			/*!< DUB - Stream label */
 	char pause_resume_events[DUB_PAUSE_RESUME_EVENTS];	/*!< DUB - Pause & resume events */
-	int pause_resume_event_counter;				/
+	int pause_resume_event_counter;				/*!< DUB - Pause & resume events counter */
 };
 
 /*! \brief The monotonically increasing integer counter for channel uniqueids */
@@ -1731,7 +1731,7 @@ void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event)
                 else
                         chan->pause_resume_events[strlen(chan->pause_resume_events)-1]=',';
 
-                str_len = asprintf(&buffer, "%s", chan->pause_resume_events);
+                str_len = ast_asprintf(&buffer, "%s", chan->pause_resume_events);
                 snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "%s {\"paused_at\": \"%ld\", \"resumed_at\": null, \"paused_duration\": null}]",
                                                                            buffer,
                                                                            chan->pause_start_time);
@@ -1742,17 +1742,17 @@ void ast_channel_update_pause_resume_events(struct ast_channel *chan, int event)
 		snprintf(paused_duration, sizeof(paused_duration), "%ld", call_resumed_at - chan->pause_start_time);
 
 		/*! Update resumed_at */
-                str_len = asprintf(&buffer, "%s", chan->pause_resume_events);
+                str_len = ast_asprintf(&buffer, "%s", chan->pause_resume_events);
 		snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "%s", replace_str(buffer, "null", resumed_at));
 		/*! Update paused_duration */
-		free(buffer);
-		str_len = asprintf(&buffer, "%s", chan->pause_resume_events);
+		ast_free(buffer);
+		str_len = ast_asprintf(&buffer, "%s", chan->pause_resume_events);
 		snprintf(chan->pause_resume_events, DUB_PAUSE_RESUME_EVENTS, "%s", replace_str(buffer, "null", paused_duration));
 
                 ast_debug(3, "RESUME : pause_resume_events === %s\n", chan->pause_resume_events);
         }
 
-        free(buffer);
+        ast_free(buffer);
 }
 
 /*! Set & get the timestamp of the last received dtmf */

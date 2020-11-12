@@ -227,6 +227,8 @@ struct ast_rtp_instance {
 	AST_VECTOR(, int) extmap_negotiated;
 	/*! Negotiated RTP extensions (using index based on unique id) */
 	AST_VECTOR(, struct rtp_extmap) extmap_unique_ids;
+        /*! DUB - Stream label */
+        long int stream_label;
 };
 
 /*!

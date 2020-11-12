@@ -40,18 +40,15 @@
 #define FORMAT_INTERFACE_BUCKETS 53
 
 /*! \brief Definition of a media format */
-struct ast_format {
-	/*! Name of the format */
+/*struct ast_format {
 	const char *name;
-	/*! \brief Pointer to the codec in use for this format */
 	struct ast_codec *codec;
-	/*! \brief Attribute specific data, implementation specific */
 	void *attribute_data;
-	/*! \brief Pointer to the optional format interface */
 	const struct ast_format_interface *interface;
-	/*! \brief The number if audio channels used, if more than one an interleaved format is required */
 	unsigned int channel_count;
+	int  id;
 };
+*/
 
 /*! \brief Structure used when registering a format interface */
 struct format_interface {

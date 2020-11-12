@@ -1640,6 +1640,7 @@ static void dub_channel_build_dtmf_pattern(struct ast_channel *chan, struct ast_
 	return;
 } 
 
+
 /*! DUB - Insert Silence to the Recording file */
 static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct ast_filestream *fs, int stream_no, long int ts_start, long int f_ptime, long int gap_ms, unsigned int themssrc)
 {
@@ -1664,12 +1665,13 @@ static int insert_silence(struct ast_channel *chan, struct ast_frame *f, struct 
     };
 
     /* Generating silent frame */
-    switch (f->subclass.format.id) {
-        case AST_FORMAT_G729A:
+    	
+    switch (f->subclass.format->id) {
+        case E_AST_FORMAT_G729A:
             memcpy(buf, g729_filler, f->datalen);
             break;
-        case AST_FORMAT_ULAW:
-        case AST_FORMAT_ALAW:
+        case E_AST_FORMAT_ULAW:
+        case E_AST_FORMAT_ALAW:
             memset(buf, 0, sizeof(buf));
             break;
         default:
@@ -3150,7 +3152,7 @@ static int handle_setpriority(struct ast_channel *chan, AGI *agi, int argc, cons
 
 static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const char * const argv[])
 {
-	struct ast_filestream *fs;
+	struct ast_filestream *fs,*fs2;
 	struct ast_frame *f;
 	struct timeval start;
 	long sample_offset = 0;
@@ -3164,15 +3166,19 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 	int gotsilence = 0;             /* did we timeout for silence? */
 	char *silencestr = NULL;
 	RAII_VAR(struct ast_format *, rfmt, NULL, ao2_cleanup);
+	// filename variable is dynamically assigned from the length of argv[2]
+        // ~10 needed for "-streamX" suffix in the two generated wav files */	
+	int filename_size = strlen(argv[2]) * sizeof(char) + 10;
+        char *filename = ast_malloc(filename_size); 
 
 	/* XXX EAGI FIXME XXX */
 
 	if (argc < 6) {
-		free(filename);	
+		ast_free(filename);	
 		return RESULT_SHOWUSAGE;
 	}
 	if (sscanf(argv[5], "%30d", &ms) != 1) {
-	        free(filename);
+	        ast_free(filename);
 		return RESULT_SHOWUSAGE;
 	}
 
@@ -3202,14 +3208,14 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 		if (res < 0) {
 			ast_log(LOG_WARNING, "Unable to set to linear mode, giving up\n");
 			ast_agi_send(agi->fd, chan, "200 result=%d\n", res);
-			free(filename);
+			ast_free(filename);
 			return RESULT_FAILURE;
 		}
 		sildet = ast_dsp_new();
 		if (!sildet) {
 			ast_log(LOG_WARNING, "Unable to create silence detector :(\n");
 			ast_agi_send(agi->fd, chan, "200 result=-1\n");
-			free(filename);
+			ast_free(filename);
 			return RESULT_FAILURE;
 		}
 		ast_dsp_set_threshold(sildet, ast_dsp_get_threshold_from_settings(THRESHOLD_SILENCE));
@@ -3229,43 +3235,61 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 	if (res) {
 		ast_agi_send(agi->fd, chan, "200 result=%d (randomerror) endpos=%ld\n", res, sample_offset);
 	} else {
-		fs = ast_writefile(argv[2], argv[3], NULL, O_CREAT | O_WRONLY | (sample_offset ? O_APPEND : 0), 0, AST_FILE_MODE);
+		snprintf(filename, filename_size, "%s-stream1", argv[2]);
+		fs = ast_writefile(filename, argv[3], NULL, O_CREAT | O_WRONLY | (sample_offset ? O_APPEND : 0), 0, AST_FILE_MODE);
+		ast_log(LOG_NOTICE, "Audio file #1: %s.%s\n",filename,argv[3]);
 		if (!fs) {
 			res = -1;
 			ast_agi_send(agi->fd, chan, "200 result=%d (writefile)\n", res);
 			if (sildet)
 				ast_dsp_free(sildet);
-			free(filename);
+			ast_free(filename);
 			return RESULT_FAILURE;
 		}
+		snprintf(filename, filename_size, "%s-stream2", argv[2]);
+		fs2 = ast_writefile(filename, argv[3], NULL, O_CREAT | O_WRONLY | (sample_offset ? O_APPEND : 0), 0, AST_FILE_MODE);
+		ast_log(LOG_NOTICE, "Audio file #2: %s.%s\n",filename,argv[3]);
+		if (!fs2) {
+                        res = -1;
+                        //ast_agi_send(agi->fd, chan, "200 result=%d (writefile)\n", res);
+                        if (sildet)
+                                ast_dsp_free(sildet);
+                        ast_free(filename);
+                        return RESULT_FAILURE;
+                }
 
 		/* Request a video update */
 		ast_indicate(chan, AST_CONTROL_VIDUPDATE);
-
 		ast_channel_stream_set(chan, fs);
-		ast_applystream(chan,fs);
-		/* really should have checks */
-		ast_seekstream(fs, sample_offset, SEEK_SET);
-		ast_truncstream(fs);
+                ast_channel_stream_set(chan, fs2);
+                ast_applystream(chan,fs);
+                ast_applystream(chan,fs2);
+                /* really should have checks */
+                ast_seekstream(fs, sample_offset, SEEK_SET);
+                ast_truncstream(fs);
+                ast_seekstream(fs2, sample_offset, SEEK_SET);
+                ast_truncstream(fs2);
 
 		start = ast_tvnow();
 		while ((ms < 0) || ast_tvdiff_ms(ast_tvnow(), start) < ms) {
 			res = ast_waitfor(chan, ms - ast_tvdiff_ms(ast_tvnow(), start));
 			if (res < 0) {
 				ast_closestream(fs);
+				ast_closestream(fs2);
 				ast_agi_send(agi->fd, chan, "200 result=%d (waitfor) endpos=%ld\n", res,sample_offset);
 				if (sildet)
 					ast_dsp_free(sildet);
-				free(filename);
+				ast_free(filename);
 				return RESULT_FAILURE;
 			}
 			f = ast_read(chan);
 			if (!f) {
 				ast_closestream(fs);
+				ast_closestream(fs2);
 				ast_agi_send(agi->fd, chan, "200 result=%d (hangup) endpos=%ld\n", -1, sample_offset);
 				if (sildet)
 					ast_dsp_free(sildet);
-				free(filename);
+				ast_free(filename);
 				return RESULT_FAILURE;
 			}
 			switch(f->frametype) {
@@ -3302,17 +3326,17 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 					ast_frfree(f);
 					if (sildet)
 						ast_dsp_free(sildet);
-					free(filename);
+					ast_free(filename);
 					return RESULT_SUCCESS;
 				}
 				break;
 			case AST_FRAME_VOICE:
 				if (!ast_test_flag(ast_channel_flags(chan), AST_FLAG_DUB_PAUSE_RESUME_RECORDING)) {
-				    if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
-					ast_debug(3, "Write Stream1\n");
-					add_silence(chan, f, fs, 1);
-					ast_writestream(fs, f);
-				     } else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
+				   	 if (ast_test_flag(f, AST_FRFLAG_STREAM1)) {
+						ast_debug(3, "Write Stream1\n");
+						add_silence(chan, f, fs, 1);
+						ast_writestream(fs, f);
+				     	 } else if (ast_test_flag(f, AST_FRFLAG_STREAM2)) {
                                         	ast_debug(3, "Write Stream2\n");
                                         	add_silence(chan, f, fs2, 2);
                                         	ast_writestream(fs2, f);
@@ -3383,7 +3407,7 @@ static int handle_recordfile(struct ast_channel *chan, AGI *agi, int argc, const
 			ast_log(LOG_WARNING, "Unable to restore read format on '%s'\n", ast_channel_name(chan));
 		ast_dsp_free(sildet);
 	}
-	free(filename);
+	ast_free(filename);
 	return RESULT_SUCCESS;
 }
 

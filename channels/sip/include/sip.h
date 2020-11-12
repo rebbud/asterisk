@@ -1338,7 +1338,7 @@ struct sip_peer {
 	int busy_level;                 /*!< Level of active channels where we signal busy */
 	int maxforwards;                /*!< SIP Loop prevention */
 	enum transfermodes allowtransfer;   /*! SIP Refer restriction scheme */
-	struct ast_codec_pref prefs;    /*!< DUB  codec prefs */
+	//struct ast_codec_pref prefs;    /*!< DUB  codec prefs */
 	int lastmsgssent;				/*!< The last known VM message counts (new/old) */
 	unsigned int sipoptions;        /*!<  Supported SIP options */
 	struct ast_flags flags[3];      /*!<  SIP_ flags */
