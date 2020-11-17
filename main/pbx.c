@@ -3011,7 +3011,7 @@ enum ast_extension_states ast_devstate_to_extenstate(enum ast_device_state devst
 	case AST_DEVICE_BUSY:
 		return AST_EXTENSION_BUSY;
 	case AST_DEVICE_UNKNOWN:
-		return AST_EXTENSION_NOT_INUSE;
+			return AST_EXTENSION_NOT_INUSE;
 	case AST_DEVICE_UNAVAILABLE:
 	case AST_DEVICE_INVALID:
 		return AST_EXTENSION_UNAVAILABLE;
@@ -4254,6 +4254,20 @@ void ast_pbx_h_exten_run(struct ast_channel *chan, const char *context)
 		ast_verb(2, "Spawn extension (%s, %s, %d) exited non-zero on '%s'\n",
 			ast_channel_context(chan), ast_channel_exten(chan),
 			ast_channel_priority(chan), ast_channel_name(chan));
+		/* DUB */
+		long int s1_rx_pkt = ast_channel_get_pkt_count(chan, 1);
+		long int s2_rx_pkt = ast_channel_get_pkt_count(chan, 2);
+		long int s1_ext_pkt = ast_channel_get_extra_pkt_count(chan, 1);
+		long int s2_ext_pkt = ast_channel_get_extra_pkt_count(chan, 2);
+
+		ast_verb(2, "%s: Stream 1: Rx Packets: %ld\t Extra Packets: %ld\t Total Packets: %ld\n", ast_channel_name(chan), s1_rx_pkt, s1_ext_pkt, s1_rx_pkt+s1_ext_pkt);
+		ast_verb(2, "%s: Stream 2: Rx Packets: %ld\t Extra Packets: %ld\t Total Packets: %ld\n", ast_channel_name(chan), s2_rx_pkt, s2_ext_pkt, s2_rx_pkt+s2_ext_pkt);
+
+		struct timeval rec_end_ts = (ast_tvcmp(ast_channel_get_rec_end_ts(chan,1), ast_channel_get_rec_end_ts(chan,2))<0)?ast_channel_get_rec_end_ts(chan,2):ast_channel_get_rec_end_ts(chan,1);
+		int64_t rec_duration = ast_tvdiff_sec(rec_end_ts, ast_channel_get_rec_start_time(chan));
+		ast_verb(2, "%s: Recording Duration (seconds): %ld\n", ast_channel_name(chan), ++rec_duration);
+		ast_verb(2, "%s: Pause & Resume events: %s\n", ast_channel_name(chan), ast_channel_get_pause_resume_events(chan));
+		/* DUB changes ends */
 	}
 
 	/* An "h" exten has been run, so indicate that one has been run. */

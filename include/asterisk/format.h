@@ -28,7 +28,54 @@
 #ifndef _AST_FORMAT_H_
 #define _AST_FORMAT_H_
 
-struct ast_format;
+//struct ast_format;
+
+#define AST_FORMAT_TYPE_AUDIO 100000
+enum ast_format_id {
+        /*! G.723.1 compression */
+        E_AST_FORMAT_G723_1           = 1 + AST_FORMAT_TYPE_AUDIO,
+        /*! GSM compression */
+        E_AST_FORMAT_GSM              = 2 + AST_FORMAT_TYPE_AUDIO,
+        /*! Raw mu-law data (G.711) */
+        E_AST_FORMAT_ULAW             = 3 + AST_FORMAT_TYPE_AUDIO,
+        /*! Raw A-law data (G.711) */
+        E_AST_FORMAT_ALAW             = 4 + AST_FORMAT_TYPE_AUDIO,
+        /*! ADPCM (G.726, 32kbps, AAL2 codeword packing) */
+        E_AST_FORMAT_G726_AAL2        = 5 + AST_FORMAT_TYPE_AUDIO,
+        /*! ADPCM (IMA) */
+        E_AST_FORMAT_ADPCM            = 6 + AST_FORMAT_TYPE_AUDIO,
+        /*! LPC10, 180 samples/frame */
+        E_AST_FORMAT_LPC10            = 7 + AST_FORMAT_TYPE_AUDIO,
+        /*! G.729A audio */
+        E_AST_FORMAT_G729A            = 8 + AST_FORMAT_TYPE_AUDIO,
+        /*! SpeeX Free Compression */
+        E_AST_FORMAT_SPEEX            = 9 + AST_FORMAT_TYPE_AUDIO,
+        /*! iLBC Free Compression */
+        E_AST_FORMAT_ILBC             = 10 + AST_FORMAT_TYPE_AUDIO,
+        /*! ADPCM (G.726, 32kbps, RFC3551 codeword packing) */
+        E_AST_FORMAT_G726             = 11 + AST_FORMAT_TYPE_AUDIO,
+        /*! G.722 */
+        E_AST_FORMAT_G722             = 12 + AST_FORMAT_TYPE_AUDIO,
+	E_AST_FORMAT_G719             = 15 + AST_FORMAT_TYPE_AUDIO,
+        /*! SpeeX Wideband (16kHz) Free Compression */
+};
+
+/*! \brief Definition of a media format */
+struct ast_format {
+        /*! Name of the format */
+        const char *name;
+        /*! \brief Pointer to the codec in use for this format */
+        struct ast_codec *codec;
+        /*! \brief Attribute specific data, implementation specific */
+        void *attribute_data;
+        /*! \brief Pointer to the optional format interface */
+        const struct ast_format_interface *interface;
+        /*! \brief The number if audio channels used, if more than one an interleaved format is required */
+        unsigned int channel_count;
+        /* DUB Temporarily */
+        enum ast_format_id  id;
+};
+
 
 /*! \brief Format comparison results */
 enum ast_format_cmp_res {
