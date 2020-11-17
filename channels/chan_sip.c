@@ -10631,11 +10631,13 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 					ast_debug(1, "Ignoring audio media offer because port number is zero\n");
 					continue;
 				}
-				/* We continue processing same-type audio streams, as required by SIPREC */
+				/* DUB 
+				 * We continue processing same-type audio streams, as required by SIPREC 
 				if (has_media_stream(p, SDP_AUDIO)) {
 					ast_log(LOG_WARNING, "Declining non-primary audio stream: %s\n", m);
 					continue;
 				}
+				*/
 
 				/* Check number of ports offered for stream */
 				if (numberofports > 1) {
@@ -10706,11 +10708,9 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req, int t38action
 				audio = TRUE;
 				offer->type = SDP_AUDIO;
 				portno = x;
-/*
-
-audio_port_list[audio_index++] = x;
+				audio_port_list[audio_index++] = x;
 				ast_log(LOG_NOTICE, "Remote port audio in m-line = %d\n", portno);
-*/
+
 				/* Scan through the RTP payload types specified in a "m=" line: */
 				for (; !ast_strlen_zero(codecs); codecs = ast_skip_blanks(codecs + len)) {
 					if (sscanf(codecs, "%30u%n", &codec, &len) != 1) {
@@ -11087,15 +11087,14 @@ audio_port_list[audio_index++] = x;
 			//goto process_sdp_cleanup;
 			goto process_sdp_cleanup_b;
 		}
-	}
 
-	/*! DUB */
-	if (maudioLines == 0)
-		p->packet_size_1 = p->packet_size;
-	else if(maudioLines == 1)
-		p->packet_size_2 = p->packet_size;
-	
-	maudioLines++; // next m-audio line - array index
+		 /*! DUB */
+        	if (maudioLines == 0)
+                    p->packet_size_1 = p->packet_size;
+        	else if(maudioLines == 1)
+                	p->packet_size_2 = p->packet_size;
+        	maudioLines++; // next m-audio line - array index
+	}
 
 	/* Sanity checks */
 	if (!sa && !vsa && !tsa && !isa) {
@@ -11185,25 +11184,29 @@ audio_port_list[audio_index++] = x;
 			
 		ast_rtp_codecs_payload_formats(&newaudiortp[0], peercapability[0], &peernoncodeccapability);
 		ast_rtp_codecs_payload_formats(&newaudiortp[1], peercapability[1], &peernoncodeccapability);
-		ast_format_cap_joint_copy(peercapability[0], peercapability[1], matchingcapability);
-		if (debug) {
+		ast_format_cap_get_compatible(peercapability[0], peercapability[1], matchingcapability);
+	/*	if (debug) {
 			char s1[SIPBUFSIZE], s2[SIPBUFSIZE], s3[SIPBUFSIZE];
 	
 			ast_verbose("Capabilities: audio1 - %s, audio2 - %s, combined - %s\n",
-				ast_getformatname_multiple(s1, SIPBUFSIZE, peercapability[0]),
-				ast_getformatname_multiple(s2, SIPBUFSIZE, peercapability[1]),
-				ast_getformatname_multiple(s3, SIPBUFSIZE, matchingcapability));
+				ast_getformatname_multiple(s1, peercapability[0]),
+				ast_getformatname_multiple(s2,  peercapability[1]),
+				ast_getformatname_multiple(s3,  matchingcapability));
 		}
+	*/
 
-		if (ast_format_cap_is_empty(matchingcapability)) {
+		if (!ast_format_cap_count(matchingcapability)) {
 			ast_log(LOG_NOTICE, "No matching codecs in the two m=audio lines, not accepting this offer!\n");
 			/* Do NOT Change current setting */
 			res = -1;
 			goto process_sdp_cleanup;
 		}
-		tmp_fmt = ast_format_cap_get_format(p->jointcaps, 0);
-                framing = ast_format_cap_get_format_framing(p->jointcaps, tmp_fmt);	
-		ast_format_cap_append(newpeercapability, matchingcapability,framing);
+		/*DUB-
+		 tmp_fmt = ast_format_cap_get_format(p->jointcaps, 0);
+                 framing = ast_format_cap_get_format_framing(p->jointcaps, tmp_fmt);	
+		 ast_format_cap_append(newpeercapability, matchingcapability,framing);
+		*/
+		 ast_format_cap_append_from_cap(newpeercapability, matchingcapability, AST_MEDIA_TYPE_AUDIO);
 	} else {
 		ast_log(LOG_NOTICE, "asterisk-ms does NOT SUPPORT SINGLE m=audio line. Should be two m=audio lines.\n");
 		/* Do NOT Change current setting */
@@ -11746,8 +11749,9 @@ static int process_sdp_a_label(const char *a, struct sip_pvt *p, int stream_no)
 	char *a_string = ast_strdup(a);
 
 	if (strstr(a_string, "label") != NULL){
-		char *s_label = strtok(a_string, ":");
-		char *s_value = strtok(NULL, ":");
+		char *s_ptr   = NULL;
+		char *s_label = strtok_r(a_string, ":",&s_ptr);
+		char *s_value = strtok_r(NULL, ":",&s_ptr);
 
 		ast_debug(3,"%s: %s\n", s_label, s_value);
 
@@ -14236,7 +14240,7 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 			if (ast_rtp_instance_get_stream_label(p->rtp) > 0)
 				ast_str_append(&a_audio, 0, "a=label:%ld\r\n", ast_rtp_instance_get_stream_label(p->rtp));
 
-				if (ast_rtp_instance_get_stream_label(p->rtp2) > 0)
+			if (ast_rtp_instance_get_stream_label(p->rtp2) > 0)
 				ast_str_append(&a_audio2, 0, "a=label:%ld\r\n", ast_rtp_instance_get_stream_label(p->rtp2));	
 	
 		}
@@ -22234,7 +22238,7 @@ static int show_chanstats_cb(struct sip_pvt *cur, struct __show_chan_arg *arg)
 	struct ast_rtp_instance_stats stats;
 	char durbuf[10];
 	int duration;
-	int durh, durm, durs;
+	//int durh, durm, durs;
 	struct ast_channel *c;
 	//struct __show_chan_arg *arg = __arg;
 	int fd = arg->fd;
@@ -25788,7 +25792,7 @@ static void handle_response(struct sip_pvt *p, int resp, const char *rest, struc
 				handle_response_register(p, resp, rest, req, seqno);
 			else if (sipmethod == SIP_UPDATE) {
 				handle_response_update(p, resp, rest, req, seqno);
-			} else if (sipmethod == SIP_BYE) {
+				} else if (sipmethod == SIP_BYE) {
 				if (p->options)
 					p->options->auth_type = resp;
 				if (ast_strlen_zero(p->authname)) {
